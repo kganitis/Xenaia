@@ -17,13 +17,15 @@ public static class PostgreSqlServiceCollectionExtensions
     public static IServiceCollection AddXenaiaPostgreSql(
         this IServiceCollection services, IConfiguration configuration)
     {
+        // Hosted services start in registration order: the migrator must register
+        // before AddXenaiaData's drainer so the schema exists before the first drain.
+        services.AddHostedService<MigrationHostedService>();
         services.AddXenaiaData(configuration);
         services.AddDbContext<XenaiaDbContext>((provider, options) => options
             .UseNpgsql(
                 provider.GetRequiredService<IOptions<DataOptions>>().Value.ConnectionString,
                 npgsql => npgsql.MigrationsAssembly("Xenaia.Data.PostgreSql"))
             .UseSnakeCaseNamingConvention());
-        services.AddHostedService<MigrationHostedService>();
         return services;
     }
 }
