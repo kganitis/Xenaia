@@ -22,6 +22,7 @@ public class LayerDependencyTests
         { "Xenaia.Modules.AgentQa", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Modules.Rostering", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Data", new[] { "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Api", "Xenaia.McpServer" } },
+        { "Xenaia.Data.PostgreSql", new[] { "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Extensions.Abstractions", new[] { "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
     };
 
