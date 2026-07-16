@@ -1,0 +1,26 @@
+# Claude Code local files (never tracked, by project policy)
+CLAUDE.md
+.claude/
+
+# Secrets & local env
+.env
+.env.*
+!.env.sample
+*.local.json
+appsettings.Tenant.json
+
+# .NET build artifacts
+bin/
+obj/
+out/
+publish/
+*.user
+
+# IDE
+.idea/
+.vs/
+.vscode/
+*.DotSettings.user
+
+# OS
+.DS_Store
