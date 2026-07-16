@@ -5,4 +5,9 @@
     <ProjectReference Include="..\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+  </ItemGroup>
+
 </Project>
