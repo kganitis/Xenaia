@@ -70,7 +70,8 @@ public class CoreServiceCollectionExtensionsTests
     public void Business_hours_bind_from_config_strings_into_working_service()
     {
         // Meridian Trails, America/New_York (UTC-5 in January): Monday 09:00-17:00
-        // local is 14:00-22:00 UTC. 2026-01-01 is a configured holiday.
+        // local is 14:00-22:00 UTC. 2026-01-12 (also a Monday) is a configured holiday,
+        // so it must read closed even though it falls inside the weekly window.
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -80,7 +81,7 @@ public class CoreServiceCollectionExtensionsTests
                 ["Tenant:BusinessHours:Weekly:0:Day"] = "Monday",
                 ["Tenant:BusinessHours:Weekly:0:Open"] = "09:00",
                 ["Tenant:BusinessHours:Weekly:0:Close"] = "17:00",
-                ["Tenant:BusinessHours:Holidays:0"] = "2026-01-01",
+                ["Tenant:BusinessHours:Holidays:0"] = "2026-01-12",
             })
             .Build();
 
@@ -94,8 +95,9 @@ public class CoreServiceCollectionExtensionsTests
         var mondayInsideWindowUtc = new DateTimeOffset(2026, 1, 5, 15, 0, 0, TimeSpan.Zero);
         Assert.True(businessHours.IsOpenAt(mondayInsideWindowUtc));
 
-        // 2026-01-01 is a Thursday and a configured holiday.
-        var holidayUtc = new DateTimeOffset(2026, 1, 1, 15, 0, 0, TimeSpan.Zero);
+        // Monday 2026-01-12, 15:00 UTC == 10:00 New York: inside the weekly window,
+        // but this date is the configured holiday, so it must read closed.
+        var holidayUtc = new DateTimeOffset(2026, 1, 12, 15, 0, 0, TimeSpan.Zero);
         Assert.False(businessHours.IsOpenAt(holidayUtc));
     }
 }
