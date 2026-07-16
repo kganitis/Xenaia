@@ -1,6 +1,6 @@
-# Claude Code local files (never tracked, by project policy)
-CLAUDE.md
-.claude/
+# Local-only files (machine-specific)
+CLAUDE.local.md
+.claude/settings.local.json
 
 # Secrets & local env
 .env
