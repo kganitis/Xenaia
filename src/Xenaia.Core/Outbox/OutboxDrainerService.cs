@@ -69,20 +69,16 @@ public sealed class OutboxDrainerService(
         var domainEvent = message.ToDomainEvent();
         if (domainEvent is null)
         {
-            await store.MarkFailedAsync(
-                message.Id,
+            await TryParkAsync(
+                store, message,
                 $"Unresolvable outbox message: type '{message.Type}' could not be materialized",
-                ct);
-            logger.LogWarning(
-                "Parked unresolvable outbox message {MessageId} of type {MessageType}",
-                message.Id, message.Type);
+                cause: null, ct);
             return;
         }
 
         try
         {
             await dispatcher.DispatchAsync(domainEvent, ct);
-            await store.MarkProcessedAsync(message.Id, timeProvider.GetUtcNow(), ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -90,8 +86,38 @@ public sealed class OutboxDrainerService(
         }
         catch (Exception ex)
         {
-            await store.MarkFailedAsync(message.Id, ex.Message, ct);
-            logger.LogWarning(ex, "Parked outbox message {MessageId} after handler failure", message.Id);
+            await TryParkAsync(store, message, ex.Message, ex, ct);
+            return;
+        }
+
+        // Dispatch succeeded: a persistence failure here must not park a
+        // delivered message. Let it propagate to the batch-level catch so
+        // the message redelivers next tick (at-least-once).
+        await store.MarkProcessedAsync(message.Id, timeProvider.GetUtcNow(), ct);
+    }
+
+    private async Task TryParkAsync(
+        IOutboxStore store,
+        OutboxMessage message,
+        string error,
+        Exception? cause,
+        CancellationToken ct)
+    {
+        try
+        {
+            await store.MarkFailedAsync(message.Id, error, ct);
+            logger.LogWarning(cause, "Parked outbox message {MessageId}: {Error}", message.Id, error);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception parkException)
+        {
+            // Parking failed: leave the message unprocessed (it retries next
+            // tick) and keep draining the rest of the batch.
+            logger.LogError(parkException,
+                "Failed to park outbox message {MessageId}; it will retry next tick", message.Id);
         }
     }
 }

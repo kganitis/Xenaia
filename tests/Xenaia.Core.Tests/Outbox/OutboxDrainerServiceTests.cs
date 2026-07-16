@@ -35,6 +35,8 @@ public class OutboxDrainerServiceTests
         private readonly List<OutboxMessage> _messages = [];
         public int FailGetCalls { get; set; }
         public int GetCalls { get; private set; }
+        public int FailMarkProcessedCalls { get; set; }
+        public bool AlwaysFailMarkFailed { get; set; }
 
         public IReadOnlyList<OutboxMessage> Messages
         {
@@ -67,10 +69,23 @@ public class OutboxDrainerServiceTests
         }
 
         public Task MarkProcessedAsync(Guid id, DateTimeOffset processedAt, CancellationToken ct = default)
-            => Mutate(id, m => m with { ProcessedAt = processedAt });
+        {
+            if (FailMarkProcessedCalls > 0)
+            {
+                FailMarkProcessedCalls--;
+                throw new InvalidOperationException("mark-processed unavailable");
+            }
+            return Mutate(id, m => m with { ProcessedAt = processedAt });
+        }
 
         public Task MarkFailedAsync(Guid id, string error, CancellationToken ct = default)
-            => Mutate(id, m => m with { Error = error });
+        {
+            if (AlwaysFailMarkFailed)
+            {
+                throw new InvalidOperationException("mark-failed unavailable");
+            }
+            return Mutate(id, m => m with { Error = error });
+        }
 
         private Task Mutate(Guid id, Func<OutboxMessage, OutboxMessage> change)
         {
@@ -206,5 +221,43 @@ public class OutboxDrainerServiceTests
         var finished = await Task.WhenAny(stop, Task.Delay(TimeSpan.FromSeconds(5)));
 
         Assert.Same(stop, finished);
+    }
+
+    [Fact]
+    public async Task Mark_processed_failure_retries_the_message_instead_of_parking_it()
+    {
+        var (drainer, store, time, handler) = BuildDrainer();
+        store.FailMarkProcessedCalls = 1;
+        await store.AppendAsync([OutboxMessage.From(new DrainedEvent(DateTimeOffset.UtcNow))]);
+
+        await drainer.StartAsync(CancellationToken.None);
+        await WaitForAsync(() => store.Messages.All(m => m.ProcessedAt != null), advance: time);
+        await drainer.StopAsync(CancellationToken.None);
+
+        Assert.Null(store.Messages.Single().Error);
+        Assert.Equal(2, handler.Handled);
+    }
+
+    [Fact]
+    public async Task Park_failure_does_not_block_the_rest_of_the_batch()
+    {
+        var (drainer, store, _, handler) = BuildDrainer();
+        store.AlwaysFailMarkFailed = true;
+        var poison = new OutboxMessage
+        {
+            Type = "No.Such.Type, No.Such.Assembly",
+            Payload = "{}",
+            OccurredAt = DateTimeOffset.UtcNow.AddMinutes(-1),
+        };
+        await store.AppendAsync([poison, OutboxMessage.From(new DrainedEvent(DateTimeOffset.UtcNow))]);
+
+        await drainer.StartAsync(CancellationToken.None);
+        await WaitForAsync(() => store.Messages.Any(m => m.ProcessedAt != null));
+        await drainer.StopAsync(CancellationToken.None);
+
+        Assert.Equal(1, handler.Handled);
+        var stuck = store.Messages.Single(m => m.Id == poison.Id);
+        Assert.Null(stuck.ProcessedAt);
+        Assert.Null(stuck.Error);
     }
 }
