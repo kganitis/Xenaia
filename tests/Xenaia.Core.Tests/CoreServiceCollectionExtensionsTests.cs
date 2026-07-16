@@ -65,4 +65,37 @@ public class CoreServiceCollectionExtensionsTests
         Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IOptions<TenantProfileOptions>>().Value);
     }
+
+    [Fact]
+    public void Business_hours_bind_from_config_strings_into_working_service()
+    {
+        // Meridian Trails, America/New_York (UTC-5 in January): Monday 09:00-17:00
+        // local is 14:00-22:00 UTC. 2026-01-01 is a configured holiday.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Tenant:BusinessName"] = "Meridian Trails",
+                ["Tenant:TimeZone"] = "America/New_York",
+                ["Tenant:Locales:0"] = "en-US",
+                ["Tenant:BusinessHours:Weekly:0:Day"] = "Monday",
+                ["Tenant:BusinessHours:Weekly:0:Open"] = "09:00",
+                ["Tenant:BusinessHours:Weekly:0:Close"] = "17:00",
+                ["Tenant:BusinessHours:Holidays:0"] = "2026-01-01",
+            })
+            .Build();
+
+        var provider = new ServiceCollection()
+            .AddLogging()
+            .AddXenaiaCore(config)
+            .BuildServiceProvider();
+        var businessHours = provider.GetRequiredService<IBusinessHoursService>();
+
+        // Monday 2026-01-05, 15:00 UTC == 10:00 New York: inside the bound window.
+        var mondayInsideWindowUtc = new DateTimeOffset(2026, 1, 5, 15, 0, 0, TimeSpan.Zero);
+        Assert.True(businessHours.IsOpenAt(mondayInsideWindowUtc));
+
+        // 2026-01-01 is a Thursday and a configured holiday.
+        var holidayUtc = new DateTimeOffset(2026, 1, 1, 15, 0, 0, TimeSpan.Zero);
+        Assert.False(businessHours.IsOpenAt(holidayUtc));
+    }
 }
