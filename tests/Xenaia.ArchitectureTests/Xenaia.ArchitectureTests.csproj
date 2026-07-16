@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Data\Xenaia.Data.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Core\Xenaia.Core.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Data.MsSql\Xenaia.Data.MsSql.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Data.PostgreSql\Xenaia.Data.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Data.MySql\Xenaia.Data.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Core.Ai\Xenaia.Core.Ai.csproj" />
+    <ProjectReference Include="..\..\src\extensions\Xenaia.Extensions.Abstractions\Xenaia.Extensions.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.GoogleWorkspace\Xenaia.Adapters.GoogleWorkspace.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.BrightTide\Xenaia.Adapters.BrightTide.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.MongoAtlas\Xenaia.Adapters.MongoAtlas.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.Cohere\Xenaia.Adapters.Cohere.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.Freshdesk\Xenaia.Adapters.Freshdesk.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.Freshchat\Xenaia.Adapters.Freshchat.csproj" />
+    <ProjectReference Include="..\..\src\adapters\Xenaia.Adapters.AzureOpenAI\Xenaia.Adapters.AzureOpenAI.csproj" />
+    <ProjectReference Include="..\..\src\hosts\Xenaia.Api\Xenaia.Api.csproj" />
+    <ProjectReference Include="..\..\src\hosts\Xenaia.McpServer\Xenaia.McpServer.csproj" />
+    <ProjectReference Include="..\..\src\modules\Xenaia.Modules.Sync\Xenaia.Modules.Sync.csproj" />
+    <ProjectReference Include="..\..\src\modules\Xenaia.Modules.Concierge\Xenaia.Modules.Concierge.csproj" />
+    <ProjectReference Include="..\..\src\modules\Xenaia.Modules.Triage\Xenaia.Modules.Triage.csproj" />
+    <ProjectReference Include="..\..\src\modules\Xenaia.Modules.Rostering\Xenaia.Modules.Rostering.csproj" />
+    <ProjectReference Include="..\..\src\modules\Xenaia.Modules.AgentQa\Xenaia.Modules.AgentQa.csproj" />
+    <ProjectReference Include="..\..\src\extensions\samples\Xenaia.Extensions.Samples.TimeslotCrawler\Xenaia.Extensions.Samples.TimeslotCrawler.csproj" />
+    <ProjectReference Include="..\..\src\extensions\samples\Xenaia.Extensions.Samples.PortSchedules\Xenaia.Extensions.Samples.PortSchedules.csproj" />
+  </ItemGroup>
+
+</Project>
