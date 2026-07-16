@@ -25,6 +25,7 @@ public class PostgreSqlRegistrationTests(PostgresFixture fixture)
 
         using var scope = provider.CreateScope();
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<XenaiaDbContext>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<Xenaia.Core.Outbox.IOutboxStore>());
         Assert.Contains(services, d =>
             d.ServiceType == typeof(IHostedService) &&
             d.ImplementationType == typeof(MigrationHostedService));

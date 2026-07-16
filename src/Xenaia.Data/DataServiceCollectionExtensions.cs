@@ -16,6 +16,7 @@ public static class DataServiceCollectionExtensions
     {
         services.AddValidatedOptions<DataOptions>(configuration);
         services.AddValidatedOptions<OutboxOptions>(configuration);
+        services.AddScoped<IOutboxStore, EfOutboxStore>();
         services.AddHostedService<OutboxDrainerService>();
         return services;
     }
