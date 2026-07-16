@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xenaia.Data\Xenaia.Data.csproj" />
+  </ItemGroup>
+
+</Project>

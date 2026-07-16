@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modules\Xenaia.Modules.Concierge\Xenaia.Modules.Concierge.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Xenaia.Core\Xenaia.Core.csproj" />
+    <ProjectReference Include="..\..\modules\Xenaia.Modules.Sync\Xenaia.Modules.Sync.csproj" />
+    <ProjectReference Include="..\..\modules\Xenaia.Modules.Rostering\Xenaia.Modules.Rostering.csproj" />
+  </ItemGroup>
+
+</Project>

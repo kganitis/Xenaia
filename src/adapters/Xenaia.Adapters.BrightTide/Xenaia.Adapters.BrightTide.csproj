@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modules\Xenaia.Modules.Triage\Xenaia.Modules.Triage.csproj" />
+  </ItemGroup>
+
+</Project>
