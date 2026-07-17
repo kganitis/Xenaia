@@ -1,10 +1,12 @@
 using Xenaia.Core;
 using Xenaia.Data;
 using Xenaia.Data.PostgreSql;
+using Xenaia.Domain.Bookings;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddXenaiaCore(builder.Configuration);
+builder.Services.AddBookingsDomain(builder.Configuration);
 builder.Services.AddXenaiaPostgreSql(builder.Configuration);
 builder.Services.AddHealthChecks().AddDbContextCheck<XenaiaDbContext>();
 

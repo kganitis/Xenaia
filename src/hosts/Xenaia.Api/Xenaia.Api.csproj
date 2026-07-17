@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Xenaia.Core\Xenaia.Core.csproj" />
     <ProjectReference Include="..\..\Xenaia.Data.PostgreSql\Xenaia.Data.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
   </ItemGroup>
 
   <ItemGroup>
