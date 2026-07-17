@@ -25,7 +25,10 @@ public static class PostgreSqlServiceCollectionExtensions
             .UseNpgsql(
                 provider.GetRequiredService<IOptions<DataOptions>>().Value.ConnectionString,
                 npgsql => npgsql.MigrationsAssembly("Xenaia.Data.PostgreSql"))
-            .UseSnakeCaseNamingConvention());
+            .UseSnakeCaseNamingConvention()
+            .AddInterceptors(
+                provider.GetRequiredService<DomainEventsToOutboxInterceptor>(),
+                provider.GetRequiredService<AuditStampInterceptor>()));
         return services;
     }
 }

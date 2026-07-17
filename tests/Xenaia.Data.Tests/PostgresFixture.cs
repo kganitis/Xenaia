@@ -28,6 +28,9 @@ public sealed class PostgresFixture : IAsyncLifetime
         new DbContextOptionsBuilder<XenaiaDbContext>()
             .UseNpgsql(ConnectionString, o => o.MigrationsAssembly("Xenaia.Data.PostgreSql"))
             .UseSnakeCaseNamingConvention()
+            .AddInterceptors(
+                new DomainEventsToOutboxInterceptor(),
+                new AuditStampInterceptor(TimeProvider.System))
             .Options);
 }
 
