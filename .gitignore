@@ -24,3 +24,7 @@ publish/
 
 # OS
 .DS_Store
+
+# Local maintenance scripts (never tracked)
+
+.deid/
