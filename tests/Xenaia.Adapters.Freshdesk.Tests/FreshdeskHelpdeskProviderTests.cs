@@ -108,12 +108,39 @@ public class FreshdeskHelpdeskProviderTests
         Assert.Equal(Convert.ToBase64String(Encoding.ASCII.GetBytes("test-key:X")),
             request.Headers.Authorization.Parameter);
         var query = request.RequestUri!.Query;
-        Assert.Contains("status=2", query);
+        Assert.DoesNotContain("status=", query);
         Assert.Contains("order_by=created_at", query);
         Assert.Contains("order_type=asc", query);
         Assert.Contains("include=description,requester", query);
         Assert.Contains("per_page=2", query);
         Assert.Contains("page=1", query);
+    }
+
+    [Fact]
+    public async Task Non_open_tickets_in_the_list_response_are_filtered_out()
+    {
+        var (provider, handler) = Build();
+        var closedTicketJson = $$"""
+            {
+              "id": 202,
+              "subject": "Old Booking [MT-9K3L2P7B]",
+              "description": "<p>Product Code MTP-KAYA</p>",
+              "status": 5,
+              "priority": 1,
+              "created_at": "2026-07-01T12:00:00Z",
+              "tags": ["existing"],
+              "custom_fields": { "cf_booking_code": "MT-9K3L2P7B", "cf_channel": "Wavehopper" },
+              "requester": { "email": "guest@example.net" }
+            }
+            """;
+        handler.Enqueue(HttpStatusCode.OK, $"[{TicketJson(101)},{closedTicketJson}]");
+        handler.Enqueue(HttpStatusCode.OK, "[]");
+
+        var tickets = await provider.GetOpenTicketsAsync(CancellationToken.None);
+
+        var ticket = Assert.Single(tickets);
+        Assert.Equal("101", ticket.Id);
+        Assert.Equal(TicketStatus.Open, ticket.Status);
     }
 
     [Fact]

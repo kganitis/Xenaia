@@ -21,16 +21,19 @@ public sealed class FreshdeskHelpdeskProvider(
 {
     private const int MaxPages = 300;
 
+    private readonly Dictionary<string, string> _canonicalByVendor = options.Value.FieldMap
+        .ToDictionary(kv => kv.Value, kv => kv.Key, StringComparer.OrdinalIgnoreCase);
+
     public async Task<IReadOnlyList<HelpdeskTicket>> GetOpenTicketsAsync(CancellationToken ct)
     {
         var pageSize = options.Value.PageSize;
         var tickets = new List<HelpdeskTicket>();
         for (var page = 1; page <= MaxPages; page++)
         {
-            var endpoint = "tickets?status=2&order_by=created_at&order_type=asc"
+            var endpoint = "tickets?order_by=created_at&order_type=asc"
                 + $"&include=description,requester&per_page={pageSize}&page={page}";
             var dtos = await http.GetFromJsonAsync<List<FreshdeskTicketDto>>(endpoint, ct) ?? [];
-            tickets.AddRange(dtos.Select(Map));
+            tickets.AddRange(dtos.Where(d => d.Status == 2).Select(Map));
             if (dtos.Count < pageSize) break;
         }
         logger.LogInformation("Fetched {Count} open tickets from Freshdesk", tickets.Count);
@@ -101,12 +104,10 @@ public sealed class FreshdeskHelpdeskProvider(
 
     private HelpdeskTicket Map(FreshdeskTicketDto dto)
     {
-        var canonicalByVendor = options.Value.FieldMap
-            .ToDictionary(kv => kv.Value, kv => kv.Key, StringComparer.OrdinalIgnoreCase);
         var fields = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (vendorName, value) in dto.CustomFields ?? [])
         {
-            if (!canonicalByVendor.TryGetValue(vendorName, out var canonical))
+            if (!_canonicalByVendor.TryGetValue(vendorName, out var canonical))
                 continue;
             var text = value.ValueKind switch
             {
