@@ -22,6 +22,18 @@ public class CatalogEntityTests
     }
 
     [Fact]
+    public void Category_rejects_blank_title()
+    {
+        Assert.Throws<CatalogRuleViolationException>(() => Category.Define(3, " "));
+        Assert.Throws<CatalogRuleViolationException>(() => Category.Define(4, ""));
+        Assert.Throws<CatalogRuleViolationException>(() => Category.Define(5, "\t"));
+
+        var category = Category.Define(6, "Valid Category");
+        Assert.Throws<CatalogRuleViolationException>(() => category.Retitle("  "));
+        Assert.Throws<CatalogRuleViolationException>(() => category.Retitle(""));
+    }
+
+    [Fact]
     public void Extra_rejects_blank_alias_and_negative_price()
     {
         Assert.Throws<CatalogRuleViolationException>(() => Extra.Define(" ", "Lunch"));
