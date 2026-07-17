@@ -5,15 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\modules\Xenaia.Modules.Triage\Xenaia.Modules.Triage.csproj" />
-    <ProjectReference Include="..\Xenaia.PortContracts\Xenaia.PortContracts.csproj" />
   </ItemGroup>
 
 </Project>
