@@ -1,0 +1,87 @@
+# Meridian Trails sample rule pack.
+#
+# This file is the reference example of the Xenaia rule-pack format. A rule
+# pack is one YAML file per deployment, validated fail-closed at startup:
+# any structural error, invalid regex, unknown key, or reference to an
+# unregistered processor refuses to boot the host.
+#
+# How matching works:
+#   - Rules are evaluated in order; the first match wins.
+#   - Every field listed under match must match (AND); a field may list
+#     several patterns and any one of them may match (OR).
+#   - subject, sender, and channel match the raw values; body matches the
+#     HTML converted to normalized plain text.
+#   - All patterns are case-insensitive, culture-invariant regex with a hard
+#     250 ms timeout; a timeout counts as no match.
+#   - Named captures, from match and extract patterns alike, become tokens
+#     usable in action values as {captureName}.
+#
+# What a rule can do:
+#   - category: the string this ticket is classified as.
+#   - actions: setStatus, setPriority, addTags, setCustomFields, addNote.
+#   - processor: a coded hook for logic that cannot be declarative; this
+#     pack uses booking-urgency, which escalates imminent bookings.
+#
+# Tickets no rule matches fall to defaults.unmatchedCategory, trigger a
+# needs-human notification, and are never modified beyond the triage marker.
+
+version: 1
+
+defaults:
+  unmatchedCategory: needs-human
+
+rules:
+  # Booking-engine confirmations, e.g. "New Booking [MT-7Q2K9F4A]".
+  # The booking code lands in the helpdesk custom field, and booking-urgency
+  # escalates the ticket when the tour starts within the configured window.
+  - id: new-booking
+    category: new-booking
+    match:
+      subject: '^New Booking\s+\[(?<bookingCode>MT-[A-Z0-9]{8})\]'
+    extract:
+      productCode:
+        from: body
+        pattern: 'Product\s+Code\s+(?<productCode>MTP-[A-Z0-9]{4})'
+      bookingDateTime:
+        from: body
+        pattern: 'Date\s+(?<bookingDateTime>\d{2}/\d{2}/\d{4})\s+Time\s+(?<time>\d{2}:\d{2})'
+    actions:
+      - setCustomFields: { bookingCode: '{bookingCode}' }
+      - addTags: [auto-triaged]
+    processor: booking-urgency
+
+  # Cancellations from the booking engine, e.g. "Booking Cancelled [MT-...]".
+  - id: booking-cancelled
+    category: booking-cancelled
+    match:
+      subject: '^Booking Cancelled\s+\[(?<bookingCode>MT-[A-Z0-9]{8})\]'
+    actions:
+      - setCustomFields: { bookingCode: '{bookingCode}' }
+      - addTags: [auto-triaged]
+      - setStatus: resolved
+
+  # Card-processor notifications. ZahlFix is the fictional processor for
+  # the German-language sales site: the second pattern shows locale-aware
+  # matching, the amount extraction is language-neutral.
+  - id: payment-received
+    category: payment-received
+    match:
+      subject:
+        - '^Payment received for order (?<orderRef>[A-Z0-9-]+)'
+        - '^ZahlFix: Zahlung erhalten für Bestellung (?<orderRef>[A-Z0-9-]+)'
+    extract:
+      amount:
+        from: body
+        pattern: '(?<amount>[0-9]+[.,][0-9]{2})\s*(?<currency>EUR|USD)'
+    actions:
+      - addNote: 'Automated triage: payment of {amount} {currency} received for order {orderRef}.'
+      - addTags: [payment]
+
+  # Marketplace review notifications need no reply; close them tagged.
+  - id: review-received
+    category: review-received
+    match:
+      subject: 'You have a new review'
+    actions:
+      - addTags: [review]
+      - setStatus: closed

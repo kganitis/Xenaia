@@ -20,4 +20,11 @@
     <ProjectReference Include="..\Xenaia.PortContracts\Xenaia.PortContracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\samples\rule-packs\meridian-trails.yaml"
+             Link="Fixtures\meridian-trails.yaml"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
