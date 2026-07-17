@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Xenaia.Core.Outbox;
+using Xenaia.Domain.Bookings.Bookings;
 
 namespace Xenaia.Data;
 
@@ -11,6 +12,8 @@ namespace Xenaia.Data;
 public sealed class XenaiaDbContext(DbContextOptions<XenaiaDbContext> options) : DbContext(options)
 {
     public DbSet<OutboxMessage> Outbox => Set<OutboxMessage>();
+
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(XenaiaDbContext).Assembly);
