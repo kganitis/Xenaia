@@ -61,6 +61,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xenaia.Core.Tests", "tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xenaia.Data.Tests", "tests\Xenaia.Data.Tests\Xenaia.Data.Tests.csproj", "{940108B4-ED38-4DE0-914F-A53F84C54E9A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xenaia.Domain.Bookings.Tests", "tests\Xenaia.Domain.Bookings.Tests\Xenaia.Domain.Bookings.Tests.csproj", "{38CAD5A5-38DD-49C7-86A0-F50998516176}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -395,6 +397,18 @@ Global
 		{940108B4-ED38-4DE0-914F-A53F84C54E9A}.Release|x64.Build.0 = Release|Any CPU
 		{940108B4-ED38-4DE0-914F-A53F84C54E9A}.Release|x86.ActiveCfg = Release|Any CPU
 		{940108B4-ED38-4DE0-914F-A53F84C54E9A}.Release|x86.Build.0 = Release|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Debug|x64.Build.0 = Debug|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Debug|x86.Build.0 = Debug|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Release|x64.ActiveCfg = Release|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Release|x64.Build.0 = Release|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Release|x86.ActiveCfg = Release|Any CPU
+		{38CAD5A5-38DD-49C7-86A0-F50998516176}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -427,5 +441,6 @@ Global
 		{D18CBD8B-DA0A-4ED3-B845-0BBB0E0CF7C4} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{D0AB1C1B-203F-404D-8F6A-9F653B8E79A8} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{940108B4-ED38-4DE0-914F-A53F84C54E9A} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{38CAD5A5-38DD-49C7-86A0-F50998516176} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

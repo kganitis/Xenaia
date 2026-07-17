@@ -4,7 +4,7 @@ namespace Xenaia.Core.Domain;
 /// Consistency boundary. State changes happen through methods that may
 /// Raise domain events; persistence dequeues them into the outbox.
 /// </summary>
-public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id)
+public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id), IHasDomainEvents
     where TId : notnull
 {
     private readonly List<IDomainEvent> _domainEvents = [];
