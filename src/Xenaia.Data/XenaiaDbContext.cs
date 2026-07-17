@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Xenaia.Core.Outbox;
+using Xenaia.Domain.Bookings.Availabilities;
 using Xenaia.Domain.Bookings.Bookings;
+using Xenaia.Domain.Bookings.Catalog;
+using Xenaia.Domain.Bookings.Channels;
+using Xenaia.Domain.Bookings.Products;
 
 namespace Xenaia.Data;
 
@@ -14,6 +18,20 @@ public sealed class XenaiaDbContext(DbContextOptions<XenaiaDbContext> options) :
     public DbSet<OutboxMessage> Outbox => Set<OutboxMessage>();
 
     public DbSet<Booking> Bookings => Set<Booking>();
+
+    public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<Channel> Channels => Set<Channel>();
+
+    public DbSet<Availability> Availabilities => Set<Availability>();
+
+    public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<Extra> Extras => Set<Extra>();
+
+    public DbSet<ParticipantType> ParticipantTypes => Set<ParticipantType>();
+
+    public DbSet<PaymentType> PaymentTypes => Set<PaymentType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(XenaiaDbContext).Assembly);
