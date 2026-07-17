@@ -22,6 +22,8 @@ public static class TriageServiceCollectionExtensions
         services.AddSingleton<IRulePackProvider, RulePackProvider>();
         services.AddSingleton<RuleEvaluator>();
         services.AddSingleton<ITicketProcessor, BookingUrgencyProcessor>();
+        services.AddScoped<TriageSweep>();
+        services.AddHostedService<TriagePollingService>();
         return services;
     }
 }
