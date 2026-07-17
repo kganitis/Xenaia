@@ -4,6 +4,8 @@
     <ProjectReference Include="..\..\Xenaia.Core\Xenaia.Core.csproj" />
     <ProjectReference Include="..\..\Xenaia.Data.PostgreSql\Xenaia.Data.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
+    <ProjectReference Include="..\..\modules\Xenaia.Modules.Triage\Xenaia.Modules.Triage.csproj" />
+    <ProjectReference Include="..\..\adapters\Xenaia.Adapters.Freshdesk\Xenaia.Adapters.Freshdesk.csproj" />
   </ItemGroup>
 
   <ItemGroup>
