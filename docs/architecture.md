@@ -1,12 +1,8 @@
 # Architecture
 
-How the solution is structured now.
-
-
-
-Present tense, facts only. When code changes the structure
-or Core's surface, this page is updated in the same unit of work.
-
+How the solution is structured now: present tense, facts only. When code
+changes the structure or Core's surface, this page is updated in the same
+unit of work.
 
 ## Solution layout
 

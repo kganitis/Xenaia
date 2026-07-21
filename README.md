@@ -11,5 +11,5 @@ everything business-specific lives in configuration, data, and content
 packs, never in code. Examples throughout use the fictional demo tenant
 "Meridian Trails".
 
-Status: early development. Architecture and roadmap live in the project
-docs.
+Status: early development. See [docs/architecture.md](docs/architecture.md)
+and [docs/conventions.md](docs/conventions.md).

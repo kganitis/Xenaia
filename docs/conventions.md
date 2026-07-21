@@ -1,6 +1,5 @@
 # Conventions
 
-
 Code and testing conventions for this repository.
 
 ## Code

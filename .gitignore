@@ -28,5 +28,4 @@ publish/
 .DS_Store
 
 # Local maintenance scripts (never tracked)
-
 .deid/
