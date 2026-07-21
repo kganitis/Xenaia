@@ -20,4 +20,3 @@ Code and testing conventions for this repository.
 - **Rule-engine golden tests:** the sample rule pack + a corpus of fictional ticket fixtures → expected categorizations. Doubles as living documentation of the rule format.
 - **Integration tests** are compose-based (Postgres + mocked external APIs) and cover the three milestone flows.
 - All fixtures, sample data, and test names reference the fictional demo tenant only.
-
