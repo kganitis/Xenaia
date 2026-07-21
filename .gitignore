@@ -1,6 +1,8 @@
-# Local-only files (machine-specific)
+# Local-only working layer (machine-specific or internal process, never repo content)
 CLAUDE.local.md
-.claude/settings.local.json
+CLAUDE.md
+.claude/
+.githooks/
 
 # Secrets & local env
 .env
