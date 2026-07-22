@@ -133,6 +133,26 @@ namespace Xenaia.Data.PostgreSql.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "outbound_booking_requests",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    kind = table.Column<int>(type: "integer", nullable: false),
+                    payload = table.Column<string>(type: "text", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false),
+                    sync_error = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    sync_status = table.Column<int>(type: "integer", nullable: false),
+                    synced_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_outbound_booking_requests", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "outbox",
                 columns: table => new
                 {
@@ -210,6 +230,18 @@ namespace Xenaia.Data.PostgreSql.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_products", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "sync_checkpoints",
+                columns: table => new
+                {
+                    name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    value = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_sync_checkpoints", x => x.name);
                 });
 
             migrationBuilder.CreateTable(
@@ -475,6 +507,9 @@ namespace Xenaia.Data.PostgreSql.Migrations
                 name: "extras");
 
             migrationBuilder.DropTable(
+                name: "outbound_booking_requests");
+
+            migrationBuilder.DropTable(
                 name: "outbox");
 
             migrationBuilder.DropTable(
@@ -485,6 +520,9 @@ namespace Xenaia.Data.PostgreSql.Migrations
 
             migrationBuilder.DropTable(
                 name: "product_option_extra");
+
+            migrationBuilder.DropTable(
+                name: "sync_checkpoints");
 
             migrationBuilder.DropTable(
                 name: "bookings");

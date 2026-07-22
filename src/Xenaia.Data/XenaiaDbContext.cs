@@ -5,6 +5,7 @@ using Xenaia.Domain.Bookings.Bookings;
 using Xenaia.Domain.Bookings.Catalog;
 using Xenaia.Domain.Bookings.Channels;
 using Xenaia.Domain.Bookings.Products;
+using Xenaia.Domain.Bookings.Sync;
 
 namespace Xenaia.Data;
 
@@ -32,6 +33,10 @@ public sealed class XenaiaDbContext(DbContextOptions<XenaiaDbContext> options) :
     public DbSet<ParticipantType> ParticipantTypes => Set<ParticipantType>();
 
     public DbSet<PaymentType> PaymentTypes => Set<PaymentType>();
+
+    public DbSet<OutboundBookingRequest> OutboundBookingRequests => Set<OutboundBookingRequest>();
+
+    public DbSet<SyncCheckpoint> SyncCheckpoints => Set<SyncCheckpoint>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(XenaiaDbContext).Assembly);

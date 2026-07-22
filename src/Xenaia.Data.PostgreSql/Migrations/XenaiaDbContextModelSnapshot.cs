@@ -62,6 +62,23 @@ namespace Xenaia.Data.PostgreSql.Migrations
                     b.ToTable("outbox", (string)null);
                 });
 
+            modelBuilder.Entity("Xenaia.Data.SyncCheckpoint", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("Value")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("value");
+
+                    b.HasKey("Name")
+                        .HasName("pk_sync_checkpoints");
+
+                    b.ToTable("sync_checkpoints", (string)null);
+                });
+
             modelBuilder.Entity("Xenaia.Domain.Bookings.Availabilities.Availability", b =>
                 {
                     b.Property<int>("Id")
@@ -913,6 +930,62 @@ namespace Xenaia.Data.PostgreSql.Migrations
                         .HasDatabaseName("ix_product_option_extra_product_option_id_extra_id");
 
                     b.ToTable("product_option_extra", (string)null);
+                });
+
+            modelBuilder.Entity("Xenaia.Domain.Bookings.Sync.OutboundBookingRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Sync", "Xenaia.Domain.Bookings.Sync.OutboundBookingRequest.Sync#SyncState", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("Error")
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)")
+                                .HasColumnName("sync_error");
+
+                            b1.Property<int>("Status")
+                                .HasColumnType("integer")
+                                .HasColumnName("sync_status");
+
+                            b1.Property<DateTimeOffset?>("SyncedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("synced_at");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_outbound_booking_requests");
+
+                    b.ToTable("outbound_booking_requests", (string)null);
                 });
 
             modelBuilder.Entity("Xenaia.Domain.Bookings.Bookings.BookingExtra", b =>
