@@ -219,6 +219,8 @@ public sealed class Booking : AggregateRoot<int>, ISyncTracked
         int externalId, string participantTypeAlias,
         DateTimeOffset activityAt, decimal finalPrice)
     {
+        if (finalPrice < 0)
+            throw new BookingRuleViolationException("Item price cannot be negative.");
         var item = _items.FirstOrDefault(i => i.ExternalId == externalId)
             ?? throw new BookingRuleViolationException(
                 $"Booking {Code} has no item with external id {externalId}.");
@@ -232,6 +234,10 @@ public sealed class Booking : AggregateRoot<int>, ISyncTracked
         int externalId, string? title, DateTimeOffset? activityAt,
         int quantity, decimal finalPrice)
     {
+        if (quantity <= 0)
+            throw new BookingRuleViolationException("Extra quantity must be positive.");
+        if (finalPrice < 0)
+            throw new BookingRuleViolationException("Extra price cannot be negative.");
         var extra = _extras.FirstOrDefault(e => e.ExternalId == externalId)
             ?? throw new BookingRuleViolationException(
                 $"Booking {Code} has no extra with external id {externalId}.");
@@ -245,6 +251,8 @@ public sealed class Booking : AggregateRoot<int>, ISyncTracked
         int externalId, decimal amount, string? paymentMethod,
         PaymentStatus status, DateTimeOffset? paidAt)
     {
+        if (amount < 0)
+            throw new BookingRuleViolationException("Payment amount cannot be negative.");
         var payment = _payments.FirstOrDefault(p => p.ExternalId == externalId)
             ?? throw new BookingRuleViolationException(
                 $"Booking {Code} has no payment with external id {externalId}.");
@@ -256,6 +264,8 @@ public sealed class Booking : AggregateRoot<int>, ISyncTracked
 
     public void AmendGiftCard(string code, decimal amount)
     {
+        if (amount < 0)
+            throw new BookingRuleViolationException("Gift card amount cannot be negative.");
         var giftCard = _giftCards.FirstOrDefault(g => g.Code == code)
             ?? throw new BookingRuleViolationException(
                 $"Booking {Code} has no gift card '{code}'.");

@@ -55,6 +55,8 @@ public class BookingIngestSurfaceTests
         Assert.Equal(90m, item.FinalPrice);
         Assert.Throws<BookingRuleViolationException>(
             () => booking.AmendItem(999, "adult", At, 100m));
+        Assert.Throws<BookingRuleViolationException>(
+            () => booking.AmendItem(501, "adult", At, -1m));
     }
 
     [Fact]
@@ -85,6 +87,10 @@ public class BookingIngestSurfaceTests
         Assert.Equal(45m, extra.FinalPrice);
         Assert.Throws<BookingRuleViolationException>(
             () => booking.AmendExtra(999, "x", null, 1, 10m));
+        Assert.Throws<BookingRuleViolationException>(
+            () => booking.AmendExtra(801, "x", null, 0, 10m));
+        Assert.Throws<BookingRuleViolationException>(
+            () => booking.AmendExtra(801, "x", null, 1, -1m));
     }
 
     [Fact]
@@ -115,6 +121,8 @@ public class BookingIngestSurfaceTests
         Assert.Equal(At, payment.PaidAt);
         Assert.Throws<BookingRuleViolationException>(
             () => booking.AmendPayment(999, 1m, "card", PaymentStatus.Pending, null));
+        Assert.Throws<BookingRuleViolationException>(
+            () => booking.AmendPayment(9001, -1m, "card", PaymentStatus.Pending, null));
     }
 
     [Fact]
@@ -142,6 +150,8 @@ public class BookingIngestSurfaceTests
         Assert.Equal(40m, giftCard.Amount);
         Assert.Throws<BookingRuleViolationException>(
             () => booking.AmendGiftCard("MTGIFT-99", 10m));
+        Assert.Throws<BookingRuleViolationException>(
+            () => booking.AmendGiftCard("MTGIFT-01", -1m));
     }
 
     [Fact]
