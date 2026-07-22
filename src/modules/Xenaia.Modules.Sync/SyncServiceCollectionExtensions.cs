@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Xenaia.Core.Options;
 using Xenaia.Modules.Sync.Availability;
+using Xenaia.Modules.Sync.Bookings;
 using Xenaia.Modules.Sync.Catalog;
 
 namespace Xenaia.Modules.Sync;
@@ -53,6 +54,14 @@ public static class SyncServiceCollectionExtensions
         services.AddSingleton<ParticipantTypeCache>();
         services.AddScoped<CatalogSyncService>();
         services.AddHostedService<CatalogRefreshService>();
+
+        // Bookings inbound (spec 6.3): the sweep is scoped, resolved fresh per
+        // BookingPollingService tick; the polling service is the hosted
+        // checkpoint-driven loop. Registration is unconditional here (like
+        // the hosted services above); host-level flow gating arrives in
+        // Task 16.
+        services.AddScoped<BookingInboundSweep>();
+        services.AddHostedService<BookingPollingService>();
 
         return services;
     }
