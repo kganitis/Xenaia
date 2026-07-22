@@ -38,11 +38,15 @@ public class SheetWriteBufferTests
     }
 
     [Fact]
-    public async Task Flush_lands_the_write_back_on_the_matching_row_of_a_multi_row_sheet()
+    public async Task Flush_lands_the_write_back_on_a_merged_continuation_row()
     {
         var gateway = new InMemorySpreadsheetGateway();
+        // Realistic merged block: row 2 carries the full A-E identity, row 3 is a
+        // continuation row (blank B/C/E, only A + write-back columns) that must
+        // inherit product/option/from/to from row 2 via SheetCombinationParser's
+        // carry-forward semantics. Row 4 is an unrelated block with its own identity.
         await SeedRow(gateway, row: 2, time: "09:00", product: 100, option: 7, combination: "100|7|2026-08-01|2026-08-01");
-        await SeedRow(gateway, row: 3, time: "10:00", product: 100, option: 7, combination: "100|7|2026-08-01|2026-08-01");
+        await SeedContinuationRow(gateway, row: 3, time: "10:00");
         await SeedRow(gateway, row: 4, time: "09:00", product: 200, option: 7, combination: "200|7|2026-08-01|2026-08-01");
 
         var buffer = new SheetWriteBuffer();
@@ -50,7 +54,8 @@ public class SheetWriteBufferTests
 
         await buffer.FlushAsync(gateway, GetSheet, CancellationToken.None);
 
-        // Only row 3 (product 100, option 7, 10:00) should carry the write-back.
+        // Only row 3 (the continuation row inheriting product 100 / option 7 from
+        // row 2's carried-forward combination) should carry the write-back.
         Assert.Empty(await gateway.GetValuesAsync(SpreadsheetId, $"{GetSheet}!F2:H2", CancellationToken.None));
         Assert.Equal(["3", "ts", "False"],
             Assert.Single(await gateway.GetValuesAsync(SpreadsheetId, $"{GetSheet}!F3:H3", CancellationToken.None)));
@@ -117,5 +122,15 @@ public class SheetWriteBufferTests
             [new SheetValueRange(
                 $"{GetSheet}!A{row}:E{row}",
                 [[time, product.ToString(), option.ToString(), "adult", combination]])],
+            CancellationToken.None);
+
+    /// <summary>Seeds a merged-cell continuation row: only column A is
+    /// populated, B/C/E arrive blank exactly as they do under a real merged
+    /// block, and the block's identity must be carried forward from the
+    /// preceding row by <see cref="SheetCombinationParser"/>.</summary>
+    private static Task SeedContinuationRow(InMemorySpreadsheetGateway gateway, int row, string time)
+        => gateway.BatchUpdateAsync(
+            SpreadsheetId,
+            [new SheetValueRange($"{GetSheet}!A{row}:E{row}", [[time, "", "", "", ""]])],
             CancellationToken.None);
 }

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Xenaia.Modules.Sync.Spreadsheets;
 
 namespace Xenaia.Modules.Sync.Availability;
@@ -30,8 +29,6 @@ public sealed class SheetWriteBuffer
     private const string InputColumns = "A:E";
     private const string WriteStartColumn = "F"; // vacancies
     private const string WriteEndColumn = "H";   // stop-sales
-    private const string DateFormat = "yyyy-MM-dd";
-    private const string TimeFormat = "HH:mm";
 
     private readonly List<PatchStatusWrite> _patchStatus = [];
     private readonly List<GetRowWrite> _getRows = [];
@@ -131,43 +128,34 @@ public sealed class SheetWriteBuffer
         return null;
     }
 
+    /// <summary>
+    /// Reads the get-sheet's A:E values and delegates the canonical
+    /// merged-cell layout parsing to <see cref="SheetCombinationParser"/>
+    /// (Task 10): a non-blank well-formed E starts a block, blank E carries
+    /// the current block's identity forward onto continuation rows, a
+    /// malformed E clears the carry state. This method just flattens each
+    /// parsed combination's timeslot rows back into per-row records so
+    /// <see cref="ResolveRow"/> can match against a flat list; it does not
+    /// re-implement the carry-forward parsing itself.
+    /// </summary>
     private static async Task<List<GetSheetRow>> ReadGetSheetRowsAsync(
         ISpreadsheetGateway gateway, string spreadsheetId, string getSheetName, CancellationToken ct)
     {
-        var parsed = new List<GetSheetRow>();
         var rows = await gateway.GetValuesAsync(spreadsheetId, $"{getSheetName}!{InputColumns}", ct);
+        var parsed = new SheetCombinationParser().Parse(rows);
 
-        for (var i = 0; i < rows.Count; i++)
+        var result = new List<GetSheetRow>();
+        foreach (var combination in parsed.Combinations)
         {
-            var cells = rows[i];
-            if (cells.Count < 5)
-                continue; // need at least through column E (the combination)
-            if (!int.TryParse(cells[1], out var product) || !int.TryParse(cells[2], out var option))
-                continue;
-
-            var combination = cells[4].Split('|');
-            if (combination.Length < 4)
-                continue;
-            if (!DateOnly.TryParseExact(combination[2], DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
-                continue;
-            if (!DateOnly.TryParseExact(combination[3], DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var to))
-                continue;
-
-            TimeOnly? time = null;
-            var timeCell = cells[0].Trim();
-            if (timeCell.Length > 0)
+            foreach (var timeslot in combination.Timeslots)
             {
-                if (!TimeOnly.TryParseExact(timeCell, TimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var t))
-                    continue; // malformed time: skip the row
-                time = t;
+                result.Add(new GetSheetRow(
+                    timeslot.RowNumber, combination.ProductExternalId, combination.OptionExternalId,
+                    timeslot.Time, combination.From, combination.To));
             }
-
-            // Row numbers are 1-based and A:E starts at row 1, so the i-th
-            // returned row is sheet row i+1.
-            parsed.Add(new GetSheetRow(i + 1, product, option, time, from, to));
         }
 
-        return parsed;
+        return result;
     }
 
     /// <summary>The in-memory gateway's A1 parser needs an explicit end cell,
