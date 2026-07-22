@@ -35,6 +35,15 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<AvailabilityPusher>();
         services.AddHostedService<AvailabilityProcessorService>();
 
+        // Availability inbound (sheet-driven fetch, spec 6.2): the parser is
+        // stateless so one instance serves every call; the fetch service is
+        // scoped, resolved once per Task 16 endpoint call. ISpreadsheetGateway
+        // is a required dependency here (unlike the outbound pusher's optional
+        // one): the endpoint that will call this service already gates on a
+        // spreadsheet provider being registered before resolving it.
+        services.AddSingleton<SheetCombinationParser>();
+        services.AddScoped<AvailabilityFetchService>();
+
         return services;
     }
 }
