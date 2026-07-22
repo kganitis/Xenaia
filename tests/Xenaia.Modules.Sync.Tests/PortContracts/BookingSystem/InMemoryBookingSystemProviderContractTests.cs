@@ -1,6 +1,7 @@
 using Xenaia.Domain.Bookings.Providers;
+using Xenaia.PortContracts.BookingSystem;
 
-namespace Xenaia.PortContracts.BookingSystem;
+namespace Xenaia.Modules.Sync.Tests.PortContracts.BookingSystem;
 
 public class InMemoryBookingSystemProviderContractTests : BookingSystemProviderContractTests
 {
