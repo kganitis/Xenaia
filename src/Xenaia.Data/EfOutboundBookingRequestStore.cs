@@ -14,6 +14,9 @@ public sealed class EfOutboundBookingRequestStore(XenaiaDbContext context)
         return Task.CompletedTask;
     }
 
+    public async Task<OutboundBookingRequest?> GetByIdAsync(int id, CancellationToken ct)
+        => await context.OutboundBookingRequests.FirstOrDefaultAsync(r => r.Id == id, ct);
+
     // Same atomic claim as EfAvailabilityStore: a single guarded UPDATE over
     // the complex Sync.Status member, so the claim races cleanly.
     public async Task<bool> TryClaimAsync(int id, CancellationToken ct)

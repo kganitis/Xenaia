@@ -7,6 +7,7 @@ namespace Xenaia.Domain.Bookings.Stores;
 public interface IOutboundBookingRequestStore
 {
     Task AddAsync(OutboundBookingRequest request, CancellationToken ct);
+    Task<OutboundBookingRequest?> GetByIdAsync(int id, CancellationToken ct);
     Task<bool> TryClaimAsync(int id, CancellationToken ct);
     Task<IReadOnlyList<OutboundBookingRequest>> GetPendingAsync(
         int batchSize, CancellationToken ct);

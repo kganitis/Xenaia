@@ -63,6 +63,18 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<BookingInboundSweep>();
         services.AddHostedService<BookingPollingService>();
 
+        // Bookings outbound (spec 6.4): the channel is a singleton wake-up
+        // queue sized by Bookings.ChannelCapacity; the enqueuer (Task 16
+        // endpoints call it) and the pusher are scoped, each resolved fresh
+        // per call or drain cycle; the push service is the hosted
+        // recovery-then-drain loop. Unconditional registration, like the
+        // hosted services above; host-level flow gating arrives in Task 16.
+        services.AddSingleton(sp =>
+            new BookingChannel(sp.GetRequiredService<IOptions<SyncOptions>>().Value.Bookings.ChannelCapacity));
+        services.AddScoped<OutboundBookingEnqueuer>();
+        services.AddScoped<BookingPusher>();
+        services.AddHostedService<BookingPushService>();
+
         return services;
     }
 }

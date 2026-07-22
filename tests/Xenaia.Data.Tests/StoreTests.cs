@@ -46,6 +46,31 @@ public class StoreTests(PostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Outbound_request_get_by_id_loads_the_row_and_is_null_for_an_unknown_id()
+    {
+        var request = OutboundBookingRequest.ForCancel("MT-GETBYID1");
+
+        int id;
+        await using (var write = fixture.CreateContext())
+        {
+            var store = new EfOutboundBookingRequestStore(write);
+            await store.AddAsync(request, default);
+            await store.SaveChangesAsync(default);
+            id = request.Id;
+        }
+
+        await using var read = fixture.CreateContext();
+        var store2 = new EfOutboundBookingRequestStore(read);
+
+        var loaded = await store2.GetByIdAsync(id, default);
+        Assert.NotNull(loaded);
+        Assert.Equal(OutboundBookingKind.Cancel, loaded!.Kind);
+        Assert.Equal("MT-GETBYID1", loaded.Payload);
+
+        Assert.Null(await store2.GetByIdAsync(id + 100_000, default));
+    }
+
+    [Fact]
     public async Task Checkpoint_is_null_when_missing_then_set_then_overwritten()
     {
         const string name = "sync.checkpoint.missing-set-overwrite";
