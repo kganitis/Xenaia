@@ -10,23 +10,28 @@ namespace Xenaia.Modules.Sync.Availability;
 /// <item>patch-status: a single status cell on the patch sheet (the range the
 /// caller supplied), set to a success or error string.</item>
 /// <item>get-row: vacancies / timestamp / stop-sales for a resolved row on the
-/// get sheet. The row is resolved at flush time by reading
-/// <c>GetSheetName!B:D</c> once per spreadsheet and matching the
-/// (product, option, timeslot) key; keys with no matching row are skipped
-/// silently.</item>
+/// get sheet. The row is resolved at flush time against the canonical get-sheet
+/// layout (see below); a pushed (product, option, timeslot) with no matching
+/// row is skipped silently.</item>
 /// </list>
-/// The buffer holds no gateway reference: the processor service owns the
-/// gateway and calls <see cref="FlushAsync"/>, so a drain with no spreadsheet
-/// provider simply never flushes.
+/// Canonical get-sheet layout (controller ruling, binding for the whole
+/// feature): input columns A = time (HH:mm, blank for slotless), B = product
+/// external id, C = option external id, D = participant aliases, E = combination
+/// string (<c>productId|optionId|from|to</c>, dates <c>yyyy-MM-dd</c>);
+/// write-back columns F = vacancies, G = timestamp, H = stop-sales.
+/// The buffer holds no gateway reference: the processor service owns the gateway
+/// and calls <see cref="FlushAsync"/>, so a drain with no spreadsheet provider
+/// simply never flushes.
 /// </summary>
 public sealed class SheetWriteBuffer
 {
-    // Get-sheet layout: B:D carry the (product, option, timeslot) key, so the
-    // write-back columns start at E. Timeslots are matched on this invariant
-    // round-trip format.
-    private const int KeyStartColumn = 2;      // column B
-    private const int WriteStartColumn = 5;    // column E
-    internal const string TimeslotKeyFormat = "yyyy-MM-ddTHH:mm:ss";
+    // Get-sheet input columns A:E are read to resolve a row; the write-back
+    // lands on F:H of the matched row.
+    private const string InputColumns = "A:E";
+    private const string WriteStartColumn = "F"; // vacancies
+    private const string WriteEndColumn = "H";   // stop-sales
+    private const string DateFormat = "yyyy-MM-dd";
+    private const string TimeFormat = "HH:mm";
 
     private readonly List<PatchStatusWrite> _patchStatus = [];
     private readonly List<GetRowWrite> _getRows = [];
@@ -53,8 +58,8 @@ public sealed class SheetWriteBuffer
 
     /// <summary>
     /// Writes every buffered cell through the gateway, one batch per
-    /// spreadsheet, then clears the buffer. Get-row keys are resolved against
-    /// a freshly read <c>{getSheetName}!B:D</c>; unresolved keys are skipped.
+    /// spreadsheet, then clears the buffer. Get-row keys are resolved against a
+    /// freshly read <c>{getSheetName}!A:E</c>; unresolved keys are skipped.
     /// </summary>
     public async Task FlushAsync(
         ISpreadsheetGateway gateway, string getSheetName, CancellationToken ct)
@@ -76,13 +81,14 @@ public sealed class SheetWriteBuffer
             var getWrites = _getRows.Where(g => g.SpreadsheetId == spreadsheetId).ToList();
             if (getWrites.Count > 0)
             {
-                var rowByKey = await BuildRowLookupAsync(gateway, spreadsheetId, getSheetName, ct);
+                var rows = await ReadGetSheetRowsAsync(gateway, spreadsheetId, getSheetName, ct);
                 foreach (var write in getWrites)
                 {
-                    if (!rowByKey.TryGetValue(TokenFor(write.Key), out var row))
-                        continue; // missing key: skip the get write-back silently
+                    var row = ResolveRow(rows, write.Key);
+                    if (row is null)
+                        continue; // no matching row: skip the get write-back silently
                     updates.Add(new SheetValueRange(
-                        $"{getSheetName}!{ColumnLetter(WriteStartColumn)}{row}:{ColumnLetter(WriteStartColumn + 2)}{row}",
+                        $"{getSheetName}!{WriteStartColumn}{row}:{WriteEndColumn}{row}",
                         [[
                             write.Vacancies?.ToString() ?? "",
                             write.Timestamp,
@@ -99,41 +105,70 @@ public sealed class SheetWriteBuffer
         _getRows.Clear();
     }
 
-    private static async Task<Dictionary<string, int>> BuildRowLookupAsync(
+    /// <summary>
+    /// The first get-sheet row whose product and option match the key, whose
+    /// combination range covers the timeslot's date, and whose time-of-day
+    /// agrees (a blank A cell matches only the 00:00 slotless sentinel).
+    /// Returns the 1-based sheet row number, or null when nothing matches.
+    /// </summary>
+    private static int? ResolveRow(IReadOnlyList<GetSheetRow> rows, GetRowKey key)
+    {
+        var date = DateOnly.FromDateTime(key.TimeslotAt.Date);
+        var timeOfDay = TimeOnly.FromTimeSpan(key.TimeslotAt.TimeOfDay);
+        var slotless = timeOfDay == TimeOnly.MinValue;
+
+        foreach (var row in rows)
+        {
+            if (row.Product != key.ProductExternalId || row.Option != key.OptionExternalId)
+                continue;
+            if (date < row.From || date > row.To)
+                continue;
+            var timeMatches = slotless ? row.Time is null : row.Time == timeOfDay;
+            if (timeMatches)
+                return row.RowNumber;
+        }
+
+        return null;
+    }
+
+    private static async Task<List<GetSheetRow>> ReadGetSheetRowsAsync(
         ISpreadsheetGateway gateway, string spreadsheetId, string getSheetName, CancellationToken ct)
     {
-        var lookup = new Dictionary<string, int>(StringComparer.Ordinal);
-        var rows = await gateway.GetValuesAsync(
-            spreadsheetId, $"{getSheetName}!{ColumnLetter(KeyStartColumn)}:{ColumnLetter(KeyStartColumn + 2)}", ct);
+        var parsed = new List<GetSheetRow>();
+        var rows = await gateway.GetValuesAsync(spreadsheetId, $"{getSheetName}!{InputColumns}", ct);
 
         for (var i = 0; i < rows.Count; i++)
         {
             var cells = rows[i];
-            if (cells.Count < 3)
-                continue;
-            if (!int.TryParse(cells[0], out var product) || !int.TryParse(cells[1], out var option))
-                continue;
-            if (!DateTime.TryParse(
-                    cells[2], CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeslot))
+            if (cells.Count < 5)
+                continue; // need at least through column E (the combination)
+            if (!int.TryParse(cells[1], out var product) || !int.TryParse(cells[2], out var option))
                 continue;
 
-            // Row numbers are 1-based and B:D starts at row 1, so the i-th
+            var combination = cells[4].Split('|');
+            if (combination.Length < 4)
+                continue;
+            if (!DateOnly.TryParseExact(combination[2], DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
+                continue;
+            if (!DateOnly.TryParseExact(combination[3], DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var to))
+                continue;
+
+            TimeOnly? time = null;
+            var timeCell = cells[0].Trim();
+            if (timeCell.Length > 0)
+            {
+                if (!TimeOnly.TryParseExact(timeCell, TimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var t))
+                    continue; // malformed time: skip the row
+                time = t;
+            }
+
+            // Row numbers are 1-based and A:E starts at row 1, so the i-th
             // returned row is sheet row i+1.
-            lookup[Token(product, option, timeslot)] = i + 1;
+            parsed.Add(new GetSheetRow(i + 1, product, option, time, from, to));
         }
 
-        return lookup;
+        return parsed;
     }
-
-    /// <summary>Matching token for a buffered key: product, option, and the
-    /// timeslot's wall-clock instant in the invariant round-trip format. Both
-    /// the sheet's D cell and the aggregate's TimeslotAt normalize to this, so
-    /// the match is offset-insensitive.</summary>
-    private static string TokenFor(GetRowKey key)
-        => Token(key.ProductExternalId, key.OptionExternalId, key.TimeslotAt.DateTime);
-
-    private static string Token(int product, int option, DateTime timeslot)
-        => $"{product}|{option}|{timeslot.ToString(TimeslotKeyFormat, CultureInfo.InvariantCulture)}";
 
     /// <summary>The in-memory gateway's A1 parser needs an explicit end cell,
     /// so a bare single cell (Tab!B5) is rewritten to the colon form
@@ -147,18 +182,8 @@ public sealed class SheetWriteBuffer
         return $"{range}:{cells}";
     }
 
-    private static string ColumnLetter(int oneBasedColumn)
-    {
-        var letters = "";
-        var n = oneBasedColumn;
-        while (n > 0)
-        {
-            var rem = (n - 1) % 26;
-            letters = (char)('A' + rem) + letters;
-            n = (n - 1) / 26;
-        }
-        return letters;
-    }
+    private readonly record struct GetSheetRow(
+        int RowNumber, int Product, int Option, TimeOnly? Time, DateOnly From, DateOnly To);
 
     public readonly record struct PatchStatusWrite(string SpreadsheetId, string Range, string Value);
 

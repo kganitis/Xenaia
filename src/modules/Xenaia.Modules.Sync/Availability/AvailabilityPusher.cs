@@ -96,7 +96,6 @@ public sealed class AvailabilityPusher
         if (row.Sync.Status == SyncStatus.Pending)
             row.ClaimForSync();
 
-        var now = _clock.GetUtcNow();
         var aliases = await ResolveAliasesAsync(row.ExternalProductId, row.ExternalOptionId, ct);
         var update = BuildUpdate(row, aliases);
 
@@ -115,8 +114,11 @@ public sealed class AvailabilityPusher
         }
         catch (Exception ex)
         {
+            // Capture the timestamp at the moment of failure (after retries),
+            // not before the loop, so it reflects when the row actually failed.
+            var failedAt = _clock.GetUtcNow();
             var error = Truncate(ex.Message);
-            row.MarkSyncFailed(error, now);
+            row.MarkSyncFailed(error, failedAt);
             await _store.SaveChangesAsync(ct);
             BufferFailure(item, error);
             _logger.LogWarning(
@@ -124,9 +126,10 @@ public sealed class AvailabilityPusher
             return PushOutcome.Failed;
         }
 
-        row.MarkSynced(now);
+        var syncedAt = _clock.GetUtcNow();
+        row.MarkSynced(syncedAt);
         await _store.SaveChangesAsync(ct);
-        BufferSuccess(item, row, now);
+        BufferSuccess(item, row, syncedAt);
         _logger.LogInformation("Availability {Id}: pushed and marked Synced", item.AvailabilityId);
         return PushOutcome.Synced;
     }
