@@ -48,6 +48,10 @@ public sealed class BookingInboundSweep(
 
             snapshots = await provider.GetBookingsAsync(new BookingQuery { UpdatedFrom = updatedFrom }, ct);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Bookings inbound sweep failed to fetch bookings; checkpoint left unchanged for retry");
@@ -61,6 +65,10 @@ public sealed class BookingInboundSweep(
             {
                 await ingestService.UpsertFromSnapshotAsync(snapshot, SyncDirection.Inbound, ct);
                 ingested++;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

@@ -8,6 +8,7 @@ using Xenaia.Domain.Bookings.Sync;
 using Xenaia.Modules.Sync.Bookings;
 using Xenaia.Modules.Sync.Tests.Fakes;
 using Xenaia.PortContracts.BookingSystem;
+using Xenaia.PortContracts.Fakes;
 
 namespace Xenaia.Modules.Sync.Tests.Bookings;
 
@@ -103,6 +104,26 @@ public class BookingInboundSweepTests
 
         Assert.Equal(0, ingested);
         Assert.Empty(bookingStore.Bookings);
+
+        var checkpoint = await checkpointStore.GetAsync(BookingInboundSweep.CheckpointName, CancellationToken.None);
+        Assert.Equal(priorCheckpoint, checkpoint);
+    }
+
+    [Fact]
+    public async Task Cancellation_during_ingest_propagates_and_leaves_the_checkpoint_unadvanced()
+    {
+        var options = new SyncOptions { Bookings = new BookingsOptions { BackfillDays = 30, OverlapSeconds = 60 } };
+        var provider = new InMemoryBookingSystemProvider();
+        provider.SeedBooking(Snapshot("MT-4001", updatedAt: FixedNow.AddDays(-1)));
+        var bookingStore = new FakeBookingStore();
+        using var cts = new CancellationTokenSource();
+        bookingStore.CancelDuringGetByCode = cts; // simulates host shutdown mid-ingest
+        var checkpointStore = new FakeSyncCheckpointStore();
+        var priorCheckpoint = FixedNow - TimeSpan.FromDays(1);
+        checkpointStore.Seed(BookingInboundSweep.CheckpointName, priorCheckpoint);
+        var sut = CreateSut(provider, bookingStore, checkpointStore, options);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => sut.RunAsync(cts.Token));
 
         var checkpoint = await checkpointStore.GetAsync(BookingInboundSweep.CheckpointName, CancellationToken.None);
         Assert.Equal(priorCheckpoint, checkpoint);

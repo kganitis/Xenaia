@@ -4,7 +4,7 @@ using Xenaia.Domain.Bookings.Bookings;
 using Xenaia.Domain.Bookings.Codes;
 using Xenaia.Domain.Bookings.Providers;
 using Xenaia.Domain.Bookings.Sync;
-using Xenaia.Domain.Bookings.Tests.Fakes;
+using Xenaia.PortContracts.Fakes;
 
 namespace Xenaia.Domain.Bookings.Tests.Sync;
 
