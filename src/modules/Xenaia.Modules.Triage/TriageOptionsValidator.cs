@@ -28,7 +28,13 @@ public sealed class TriageOptionsValidator(IServiceProvider serviceProvider)
     {
         var errors = new List<string>();
 
-        var processors = serviceProvider.GetServices<ITicketProcessor>();
+        // BookingLookupProcessor is scoped (its dependencies are EF/adapter
+        // scoped services); resolving it straight off the root provider
+        // would throw when scope validation is enabled, so validation gets
+        // its own scope. Singleton processors resolve the same instance
+        // either way.
+        using var scope = serviceProvider.CreateScope();
+        var processors = scope.ServiceProvider.GetServices<ITicketProcessor>();
         var registered = processors.Select(p => p.Name).ToList();
         errors.AddRange(registered
             .GroupBy(n => n, StringComparer.Ordinal)

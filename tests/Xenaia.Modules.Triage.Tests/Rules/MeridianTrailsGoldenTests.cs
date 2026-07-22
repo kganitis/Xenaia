@@ -115,6 +115,20 @@ public class MeridianTrailsGoldenTests
     }
 
     [Fact]
+    public void Booking_status_inquiry_captures_the_code_for_booking_lookup()
+    {
+        var (match, draft) = Triage(
+            "Question about booking MT-4F8K2P1L", "booking-status-inquiry.html");
+
+        Assert.NotNull(match);
+        Assert.Equal("booking-status-inquiry", match!.Rule.Category);
+        Assert.Equal("booking-lookup", match.Rule.ProcessorName);
+        Assert.Equal("MT-4F8K2P1L", match.Captures["bookingCode"]);
+        Assert.Empty(draft.Notes);
+        Assert.Null(draft.Status);
+    }
+
+    [Fact]
     public void Usd_payment_notes_the_dollar_amount()
     {
         var (match, draft) = Triage(

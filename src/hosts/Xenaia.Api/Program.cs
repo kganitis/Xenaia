@@ -15,13 +15,17 @@ builder.Services.AddXenaiaCore(builder.Configuration);
 builder.Services.AddBookingsDomain(builder.Configuration);
 builder.Services.AddXenaiaPostgreSql(builder.Configuration);
 
+// Read early: the Triage registration below needs to know whether a booking
+// system is configured so it can conditionally register BookingLookupProcessor.
+var bookingSystemConfigured = !string.IsNullOrEmpty(builder.Configuration["Providers:BookingSystem"]);
+
 var helpdeskProvider = builder.Configuration["Providers:Helpdesk"];
 switch (helpdeskProvider)
 {
     case null or "":
         break;
     case "freshdesk":
-        builder.Services.AddTriageModule(builder.Configuration);
+        builder.Services.AddTriageModule(builder.Configuration, bookingSystemConfigured);
         builder.Services.AddFreshdeskHelpdesk(builder.Configuration);
         break;
     default:

@@ -60,6 +60,17 @@ rules:
       - addTags: [auto-triaged]
       - setStatus: resolved
 
+  # Customer-initiated status inquiries naming a booking code directly in
+  # the subject, e.g. "Booking MT-4F8K2P1L status check?". booking-lookup
+  # resolves the code against the booking store (falling back to the
+  # booking system on a local miss) and leaves a private note summarizing
+  # the outcome; no declarative actions own status or tags here.
+  - id: booking-status-inquiry
+    category: booking-status-inquiry
+    match:
+      subject: 'booking\s+(?<bookingCode>MT-[A-Z0-9]{8})'
+    processor: booking-lookup
+
   # Card-processor notifications. ZahlFix is the fictional processor for
   # the German-language sales site: the second pattern shows locale-aware
   # matching, the amount extraction is language-neutral.
