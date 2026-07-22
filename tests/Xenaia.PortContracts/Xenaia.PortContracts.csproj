@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\modules\Xenaia.Modules.Triage\Xenaia.Modules.Triage.csproj" />
+    <ProjectReference Include="..\..\src\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
   </ItemGroup>
 
 </Project>
