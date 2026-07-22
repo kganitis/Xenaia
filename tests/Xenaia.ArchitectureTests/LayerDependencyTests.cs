@@ -25,6 +25,9 @@ public class LayerDependencyTests
         { "Xenaia.Data.PostgreSql", new[] { "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Extensions.Abstractions", new[] { "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Adapters.Freshdesk", new[] { "Xenaia.Core.Ai", "Xenaia.Domain", "Xenaia.Modules.Concierge", "Xenaia.Modules.Sync", "Xenaia.Modules.AgentQa", "Xenaia.Modules.Rostering", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer", "Xenaia.Extensions" } },
+        // BrightTide implements IBookingSystemProvider (owned by Domain.Bookings);
+        // it may reference Domain.Bookings + Core only, no modules or other layers.
+        { "Xenaia.Adapters.BrightTide", new[] { "Xenaia.Core.Ai", "Xenaia.Modules", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer", "Xenaia.Extensions" } },
     };
 
     [Theory]
