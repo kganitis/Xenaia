@@ -1,10 +1,13 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Xenaia.Core.Tenancy;
 using Xenaia.Domain.Bookings.Providers;
+using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
 using Xenaia.Modules.Sync.Availability;
+using Xenaia.Modules.Sync.Catalog;
 using Xenaia.Modules.Sync.Spreadsheets;
 using Xenaia.Modules.Sync.Tests.Fakes;
 using Xenaia.PortContracts.BookingSystem;
@@ -218,9 +221,17 @@ public class AvailabilityPusherTests
         var tenant = Options.Create(new TenantProfileOptions { BusinessName = "Meridian Trails", TimeZone = "Europe/Dublin", Locales = ["en-IE"] });
         var clock = new FakeTimeProvider(FixedNow);
         return new AvailabilityPusher(
-            store, provider, catalog, channel ?? new AvailabilityChannel(100), buffer,
+            store, provider, CreateParticipantTypeCache(catalog), channel ?? new AvailabilityChannel(100), buffer,
             options, tenant, clock, NullLogger<AvailabilityPusher>.Instance, gateway,
             delayer ?? ((_, _) => Task.CompletedTask));
+    }
+
+    private static ParticipantTypeCache CreateParticipantTypeCache(FakeCatalogStore catalog)
+    {
+        var provider = new ServiceCollection()
+            .AddSingleton<ICatalogStore>(catalog)
+            .BuildServiceProvider();
+        return new ParticipantTypeCache(provider.GetRequiredService<IServiceScopeFactory>());
     }
 
     private static List<AvailabilityWorkItem> Drain(AvailabilityChannel channel)

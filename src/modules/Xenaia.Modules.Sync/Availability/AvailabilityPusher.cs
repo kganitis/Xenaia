@@ -5,6 +5,7 @@ using Xenaia.Core.Tenancy;
 using Xenaia.Domain.Bookings.Providers;
 using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
+using Xenaia.Modules.Sync.Catalog;
 using Xenaia.Modules.Sync.Spreadsheets;
 
 namespace Xenaia.Modules.Sync.Availability;
@@ -33,7 +34,7 @@ public sealed class AvailabilityPusher
 
     private readonly IAvailabilityStore _store;
     private readonly IBookingSystemProvider _provider;
-    private readonly ICatalogStore _catalog;
+    private readonly ParticipantTypeCache _participantTypeCache;
     private readonly AvailabilityChannel _channel;
     private readonly SheetWriteBuffer _buffer;
     private readonly SyncOptions _options;
@@ -43,12 +44,10 @@ public sealed class AvailabilityPusher
     private readonly ILogger<AvailabilityPusher> _logger;
     private readonly Func<TimeSpan, CancellationToken, Task> _delayer;
 
-    private readonly Dictionary<(int Product, int Option), IReadOnlyList<string>> _aliasCache = [];
-
     public AvailabilityPusher(
         IAvailabilityStore store,
         IBookingSystemProvider provider,
-        ICatalogStore catalog,
+        ParticipantTypeCache participantTypeCache,
         AvailabilityChannel channel,
         SheetWriteBuffer buffer,
         IOptions<SyncOptions> options,
@@ -60,7 +59,7 @@ public sealed class AvailabilityPusher
     {
         _store = store;
         _provider = provider;
-        _catalog = catalog;
+        _participantTypeCache = participantTypeCache;
         _channel = channel;
         _buffer = buffer;
         _options = options.Value;
@@ -96,7 +95,7 @@ public sealed class AvailabilityPusher
         if (row.Sync.Status == SyncStatus.Pending)
             row.ClaimForSync();
 
-        var aliases = await ResolveAliasesAsync(row.ExternalProductId, row.ExternalOptionId, ct);
+        var aliases = await _participantTypeCache.GetAliasesAsync(row.ExternalProductId, row.ExternalOptionId, ct);
         var update = BuildUpdate(row, aliases);
 
         try
@@ -152,17 +151,6 @@ public sealed class AvailabilityPusher
             "Availability recovery: {Reset} stuck rows reset, {Enqueued} pending rows re-enqueued",
             reset, pending.Count);
         return pending.Count;
-    }
-
-    private async Task<IReadOnlyList<string>> ResolveAliasesAsync(int product, int option, CancellationToken ct)
-    {
-        if (_aliasCache.TryGetValue((product, option), out var cached))
-            return cached;
-
-        var types = await _catalog.GetParticipantTypesAsync(product, option, ct);
-        IReadOnlyList<string> aliases = types.Select(t => t.Alias).ToList();
-        _aliasCache[(product, option)] = aliases;
-        return aliases;
     }
 
     /// <summary>

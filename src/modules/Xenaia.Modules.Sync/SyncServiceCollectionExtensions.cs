@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Xenaia.Core.Options;
 using Xenaia.Modules.Sync.Availability;
+using Xenaia.Modules.Sync.Catalog;
 
 namespace Xenaia.Modules.Sync;
 
@@ -43,6 +44,15 @@ public static class SyncServiceCollectionExtensions
         // spreadsheet provider being registered before resolving it.
         services.AddSingleton<SheetCombinationParser>();
         services.AddScoped<AvailabilityFetchService>();
+
+        // Catalog sync (spec 6.5): the participant-type cache is a singleton
+        // read-through over the scoped ICatalogStore (it opens its own scope
+        // per miss); the sync service is scoped, resolved fresh per refresh
+        // tick or Task 16 endpoint call; the refresh service is the hosted
+        // warm-start-then-daily trigger.
+        services.AddSingleton<ParticipantTypeCache>();
+        services.AddScoped<CatalogSyncService>();
+        services.AddHostedService<CatalogRefreshService>();
 
         return services;
     }
