@@ -54,24 +54,39 @@ public sealed class AvailabilityPatchService(
         var skipped = 0;
         var pendingSaves = 0;
 
+        // New rows have no real id until SaveChangesAsync assigns one (EF's
+        // deferred key generation), so their work items are buffered here and
+        // only written to the channel once the save that persisted them has
+        // run. Existing rows already carry a real id and can be written as
+        // they're accepted.
+        var pendingNewRowWorkItems = new List<(AvailabilityAggregate Row, SheetWriteContext? Sheet)>();
+
         foreach (var (key, source) in expanded)
         {
-            if (!existingByKey.TryGetValue(key, out var row))
+            AvailabilityAggregate row;
+            bool isNew;
+            if (!existingByKey.TryGetValue(key, out var existing))
             {
                 row = AvailabilityAggregate.ForTimeslot(key.ProductExternalId, key.OptionExternalId, key.TimeslotAt);
                 await store.AddAsync(row, ct);
                 existingByKey[key] = row;
+                isNew = true;
             }
-            else if (row.Sync.Status == SyncStatus.Processing)
+            else
             {
-                // In flight: never touch a row a worker currently owns, force or not.
-                skipped++;
-                continue;
-            }
-            else if (!ValuesWouldChange(row, source.Vacancies, source.StopSales) && !force)
-            {
-                skipped++;
-                continue;
+                row = existing;
+                isNew = false;
+                if (row.Sync.Status == SyncStatus.Processing)
+                {
+                    // In flight: never touch a row a worker currently owns, force or not.
+                    skipped++;
+                    continue;
+                }
+                if (!ValuesWouldChange(row, source.Vacancies, source.StopSales) && !force)
+                {
+                    skipped++;
+                    continue;
+                }
             }
 
             if (source.Vacancies is not null)
@@ -89,24 +104,41 @@ public sealed class AvailabilityPatchService(
             var sheet = spreadsheetId is not null
                 ? new SheetWriteContext(spreadsheetId, source.PatchStatusRange, GetRowRange: null)
                 : null;
-            await channel.Writer.WriteAsync(new AvailabilityWorkItem(row.Id, sheet), ct);
+
+            if (isNew)
+                pendingNewRowWorkItems.Add((row, sheet));
+            else
+                await channel.Writer.WriteAsync(new AvailabilityWorkItem(row.Id, sheet), ct);
 
             pendingSaves++;
             if (pendingSaves >= SaveBatchSize)
             {
                 await store.SaveChangesAsync(ct);
+                await FlushNewRowWorkItemsAsync(pendingNewRowWorkItems, channel, ct);
                 pendingSaves = 0;
             }
         }
 
         if (pendingSaves > 0)
             await store.SaveChangesAsync(ct);
+        await FlushNewRowWorkItemsAsync(pendingNewRowWorkItems, channel, ct);
 
         logger.LogInformation(
             "Availability patch: {Accepted} accepted, {Skipped} skipped out of {Total} expanded rows",
             accepted, skipped, expanded.Count);
 
         return new AvailabilityPatchResult(accepted, skipped);
+    }
+
+    /// <summary>Writes one work item per buffered new row, reading each row's
+    /// id now that a SaveChangesAsync has persisted it, then clears the buffer.</summary>
+    private static async Task FlushNewRowWorkItemsAsync(
+        List<(AvailabilityAggregate Row, SheetWriteContext? Sheet)> pendingNewRowWorkItems,
+        AvailabilityChannel channel, CancellationToken ct)
+    {
+        foreach (var (row, sheet) in pendingNewRowWorkItems)
+            await channel.Writer.WriteAsync(new AvailabilityWorkItem(row.Id, sheet), ct);
+        pendingNewRowWorkItems.Clear();
     }
 
     /// <summary>Times empty means slotless: a single row at midnight of From

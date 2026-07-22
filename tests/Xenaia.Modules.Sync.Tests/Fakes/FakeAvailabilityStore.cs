@@ -11,14 +11,16 @@ using AvailabilityAggregate = Xenaia.Domain.Bookings.Availabilities.Availability
 
 namespace Xenaia.Modules.Sync.Tests.Fakes;
 
-/// <summary>In-memory IAvailabilityStore for AvailabilityPatchService tests:
-/// a dictionary keyed by AvailabilityKey, incremental ids assigned on
-/// Add/Seed (Availability.Id has no public setter, so ids are assigned via
-/// the Entity base class's backing field), call counts for GetByKeysAsync
-/// and SaveChangesAsync.</summary>
+/// <summary>In-memory IAvailabilityStore for AvailabilityPatchService tests.
+/// Mimics EF's deferred key generation: AddAsync buffers the entity without
+/// an id (it isn't visible to GetByKeysAsync, matching a real DB query that
+/// can't see uncommitted adds); SaveChangesAsync is what assigns the
+/// incremental id and makes the row visible. Keyed by AvailabilityKey once
+/// committed; records call counts for GetByKeysAsync and SaveChangesAsync.</summary>
 internal sealed class FakeAvailabilityStore : IAvailabilityStore
 {
     private readonly Dictionary<AvailabilityKey, AvailabilityAggregate> _byKey = [];
+    private readonly List<AvailabilityAggregate> _pendingAdds = [];
     private int _nextId = 1;
 
     public int GetByKeysCallCount { get; private set; }
@@ -50,8 +52,9 @@ internal sealed class FakeAvailabilityStore : IAvailabilityStore
 
     public Task AddAsync(AvailabilityAggregate availability, CancellationToken ct)
     {
-        AssignId(availability, _nextId++);
-        _byKey[KeyOf(availability)] = availability;
+        // No id, not yet in _byKey: matches EF, where an Added-but-unsaved
+        // entity has no database-generated key and is not query-visible.
+        _pendingAdds.Add(availability);
         return Task.CompletedTask;
     }
 
@@ -84,6 +87,12 @@ internal sealed class FakeAvailabilityStore : IAvailabilityStore
 
     public Task SaveChangesAsync(CancellationToken ct)
     {
+        foreach (var availability in _pendingAdds)
+        {
+            AssignId(availability, _nextId++);
+            _byKey[KeyOf(availability)] = availability;
+        }
+        _pendingAdds.Clear();
         SaveChangesCallCount++;
         return Task.CompletedTask;
     }
@@ -93,9 +102,7 @@ internal sealed class FakeAvailabilityStore : IAvailabilityStore
 
     private static void AssignId(AvailabilityAggregate availability, int id)
     {
-        var field = typeof(Entity<int>)
-            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-            .FirstOrDefault(f => f.Name.Contains("Id", StringComparison.Ordinal))
+        var field = typeof(Entity<int>).GetField("<Id>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException(
                 "Could not locate Availability's Id backing field for test id assignment.");
         field.SetValue(availability, id);

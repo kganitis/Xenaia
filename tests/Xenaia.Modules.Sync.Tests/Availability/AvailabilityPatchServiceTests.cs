@@ -34,10 +34,17 @@ public class AvailabilityPatchServiceTests
         Assert.Equal(TimeslotAt(times[0]), created[0].TimeslotAt);
         Assert.Equal(TimeslotAt(times[1]), created[1].TimeslotAt);
         Assert.All(created, a => Assert.Equal(SyncStatus.Pending, a.Sync.Status));
+        Assert.All(created, a => Assert.NotEqual(0, a.Id)); // real ids: SaveChangesAsync ran before we asserted
 
         var workItems = Drain(channel);
         Assert.Equal(2, workItems.Count);
         Assert.All(workItems, w => Assert.Null(w.Sheet));
+        // The work item must carry the row's real persisted id (assigned by
+        // SaveChangesAsync), never the pre-save placeholder of 0: the
+        // processor claims by id, and id 0 would never match a real row.
+        var createdIds = created.Select(a => a.Id).ToHashSet();
+        Assert.All(workItems, w => Assert.NotEqual(0, w.AvailabilityId));
+        Assert.Equal(createdIds, workItems.Select(w => w.AvailabilityId).ToHashSet());
     }
 
     [Fact]
@@ -55,6 +62,28 @@ public class AvailabilityPatchServiceTests
         Assert.Empty(Drain(channel));
         Assert.Equal(SyncStatus.Pending, existing.Sync.Status);
         Assert.Equal(5, existing.Vacancies);
+    }
+
+    [Fact]
+    public async Task Existing_pending_row_with_different_values_is_mutated_in_place_without_requeue()
+    {
+        var store = new FakeAvailabilityStore();
+        var existing = Seed(store, new TimeOnly(9, 0), vacancies: 5);
+        var service = CreateService(store, out var channel);
+        var item = new AvailabilityPatchItem(ProductId, OptionId, Day, Day, [new TimeOnly(9, 0)], 9, null, null);
+
+        var result = await service.EnqueueAsync([item], null, false, CancellationToken.None);
+
+        Assert.Equal(1, result.Accepted);
+        Assert.Equal(0, result.Skipped);
+        Assert.Equal(9, existing.Vacancies);
+        // Still Pending, not re-requeued: RequeueSync() targeting Pending is
+        // only a legal transition from Synced/Failed/Processing, never from
+        // Pending itself, so a Pending row just gets its setters called.
+        Assert.Equal(SyncStatus.Pending, existing.Sync.Status);
+
+        var workItem = Assert.Single(Drain(channel));
+        Assert.Equal(existing.Id, workItem.AvailabilityId);
     }
 
     [Fact]
