@@ -59,24 +59,33 @@ public sealed class CatalogRefreshService(
                 return;
             }
 
-            try
+            // Retry loop: on failure, wait exactly RetryDelay and try again
+            // (not the top-of-loop schedule wait, which would silently
+            // stretch the "retry in 1 hour" promise out to the next day
+            // since today's scheduled instant has already passed). Falls
+            // through to the daily schedule wait only once a run succeeds.
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await RunRefreshAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Catalog refresh failed; retrying in 1 hour");
                 try
                 {
-                    await _delayer(RetryDelay, stoppingToken);
+                    await RunRefreshAsync(stoppingToken);
+                    break;
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
                     return;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Catalog refresh failed; retrying in 1 hour");
+                    try
+                    {
+                        await _delayer(RetryDelay, stoppingToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
                 }
             }
         }
