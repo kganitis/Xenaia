@@ -75,6 +75,29 @@ public class BookingPusherTests
     }
 
     [Fact]
+    public async Task Push_cancel_treats_an_already_cancelled_local_booking_as_success()
+    {
+        var store = new FakeOutboundBookingRequestStore();
+        var request = store.Seed(OutboundBookingRequest.ForCancel("MT-2100"));
+        var provider = new InMemoryBookingSystemProvider();
+        provider.SeedBooking(new BookingSnapshot { Code = "MT-2100", Status = BookingStatus.Pending });
+        var bookingStore = new FakeBookingStore();
+        var booking = ActiveBooking("MT-2100");
+        booking.Cancel(ActivityAt);                             // local booking already cancelled
+        bookingStore.Seed(booking);
+        var notifications = new FakeNotificationService();
+        var sut = CreateSut(store, provider, bookingStore, notifications);
+
+        var outcome = await sut.ProcessAsync(request.Id, CancellationToken.None);
+
+        Assert.Equal(PushOutcome.Synced, outcome);
+        Assert.Equal(SyncStatus.Synced, request.Sync.Status);
+        Assert.Single(provider.ReceivedCancels);               // exactly one vendor cancel call
+        Assert.Empty(notifications.Sent);                       // success, not a failure
+        Assert.Equal(ActivityAt, booking.CancelledAt);         // original cancellation untouched
+    }
+
+    [Fact]
     public async Task Vendor_not_found_on_cancel_fails_permanently_with_one_call_and_a_notification()
     {
         var store = new FakeOutboundBookingRequestStore();

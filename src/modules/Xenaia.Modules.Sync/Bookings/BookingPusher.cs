@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xenaia.Core.Notifications;
+using Xenaia.Domain.Bookings.Bookings;
 using Xenaia.Domain.Bookings.Providers;
 using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
@@ -174,8 +175,18 @@ public sealed class BookingPusher
         var booking = await _bookingStore.GetByCodeAsync(code, ct)
             ?? throw new InvalidOperationException(
                 $"Booking request {request.Id}: local booking '{code}' vanished before cancel.");
-        booking.Cancel(_clock.GetUtcNow());
-        await _bookingStore.SaveChangesAsync(ct);
+
+        // Guard like BookingIngestService: an already-cancelled local booking
+        // is a success, not a failure. Double-enqueued cancels (both pass the
+        // enqueuer guard before the first push lands) and at-least-once
+        // redelivery after a crash between the save and MarkSynced both land
+        // here on a Cancelled booking; Booking.Cancel would throw, wrongly
+        // marking a request whose work already succeeded as Failed.
+        if (booking.Status != BookingStatus.Cancelled)
+        {
+            booking.Cancel(_clock.GetUtcNow());
+            await _bookingStore.SaveChangesAsync(ct);
+        }
     }
 
     private async Task NotifyFailureAsync(OutboundBookingRequest request, string error, CancellationToken ct)
