@@ -25,7 +25,7 @@ public sealed record SheetParseResult(
 
 /// <summary>
 /// Parses the get-sheet's <c>A:G</c> values (spec 6.2 step 2; canonical
-/// layout, controller ruling: A time, B product external id, C option
+/// get-sheet layout: A time, B product external id, C option
 /// external id, D participant aliases, E combination string
 /// <c>productId|optionId|from|to</c>, dates <c>yyyy-MM-dd</c>). Only columns
 /// A and E matter here: B/C/D are read back by other flows, and E already

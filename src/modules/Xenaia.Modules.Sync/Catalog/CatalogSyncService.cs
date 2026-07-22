@@ -22,7 +22,7 @@ public sealed record CatalogSyncSummary(
 /// Participant types are upserted per option, matched by alias so a type the
 /// vendor still reports is never duplicated. Every touched row (and its new
 /// participant types) finishes <c>Synced</c>. Scoped: a fresh instance per
-/// <see cref="CatalogRefreshService"/> tick or Task 16 endpoint call.
+/// <see cref="CatalogRefreshService"/> tick or refresh endpoint call.
 /// </summary>
 public sealed class CatalogSyncService(
     IBookingSystemProvider provider,

@@ -11,7 +11,7 @@ namespace Xenaia.Modules.Sync.Bookings;
 /// Turns a locally originated create/cancel into a durable
 /// <see cref="OutboundBookingRequest"/> and wakes the pusher (spec 6.4 step 1).
 /// Validation happens before anything is persisted, so a rejected request
-/// leaves no row behind. Task 16's <c>POST /api/bookings</c> and
+/// leaves no row behind. The <c>POST /api/bookings</c> and
 /// <c>POST /api/bookings/{code}/cancel</c> endpoints are the callers.
 /// </summary>
 public sealed class OutboundBookingEnqueuer(

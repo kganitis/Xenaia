@@ -7,7 +7,7 @@ namespace Xenaia.Domain.Bookings.Stores;
 /// Implemented in Xenaia.Data as an EF-backed scoped service.</summary>
 public interface ICatalogStore
 {
-    Task<IReadOnlyList<Product>> GetProductsAsync(CancellationToken ct);  // tracked, options + participant types
+    Task<IReadOnlyList<Product>> GetProductsAsync(CancellationToken ct);  // tracked, options only (participant types via GetParticipantTypesAsync)
     Task AddAsync(Product product, CancellationToken ct);
     Task AddParticipantTypeAsync(ParticipantType participantType, CancellationToken ct);
     /// <summary>Participant types for an option addressed by external ids

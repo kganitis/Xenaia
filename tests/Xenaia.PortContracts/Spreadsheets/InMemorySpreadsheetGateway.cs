@@ -112,7 +112,7 @@ public sealed class InMemorySpreadsheetGateway : ISpreadsheetGateway
         if (bang < 0)
             throw new FormatException($"Range '{range}' must be in 'Tab!A1:C3' form.");
 
-        var tab = range[..bang];
+        var tab = UnquoteTab(range[..bang]);
         var cellsPart = range[(bang + 1)..];
         var colon = cellsPart.IndexOf(':');
         if (colon < 0)
@@ -121,6 +121,16 @@ public sealed class InMemorySpreadsheetGateway : ISpreadsheetGateway
         var (startCol, startRow) = ParseCell(cellsPart[..colon]);
         var (endCol, endRow) = ParseCell(cellsPart[(colon + 1)..]);
         return (tab, startCol, startRow, endCol, endRow);
+    }
+
+    /// <summary>Strips the single quotes an A1 tab name carries when it holds
+    /// spaces or other non-plain characters, unescaping a doubled inner quote
+    /// back to one; a plain unquoted name passes through unchanged.</summary>
+    private static string UnquoteTab(string tab)
+    {
+        if (tab.Length >= 2 && tab[0] == '\'' && tab[^1] == '\'')
+            return tab[1..^1].Replace("''", "'");
+        return tab;
     }
 
     private static (int Col, int? Row) ParseCell(string cell)

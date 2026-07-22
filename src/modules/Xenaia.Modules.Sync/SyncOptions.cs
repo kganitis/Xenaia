@@ -12,8 +12,8 @@ public sealed record SyncOptions : ISectionOptions
     public CatalogOptions Catalog { get; init; } = new();
     public RetryOptions Retry { get; init; } = new();
 
-    /// <summary>Set by the host when a spreadsheet provider is configured
-    /// (see Task 16); only then does the validator require Availability's
+    /// <summary>Set by the host when a spreadsheet provider is configured;
+    /// only then does the validator require Availability's
     /// PatchSheetName/GetSheetName to be non-blank. Mutable so the host can
     /// flip it through PostConfigure after binding.</summary>
     public bool RequireSheetNames { get; set; }

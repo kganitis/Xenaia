@@ -13,8 +13,8 @@ namespace Xenaia.Modules.Sync.Availability;
 /// layout (see below); a pushed (product, option, timeslot) with no matching
 /// row is skipped silently.</item>
 /// </list>
-/// Canonical get-sheet layout (controller ruling, binding for the whole
-/// feature): input columns A = time (HH:mm, blank for slotless), B = product
+/// Canonical get-sheet layout, fixed for the whole feature: input columns
+/// A = time (HH:mm, blank for slotless), B = product
 /// external id, C = option external id, D = participant aliases, E = combination
 /// string (<c>productId|optionId|from|to</c>, dates <c>yyyy-MM-dd</c>);
 /// write-back columns F = vacancies, G = timestamp, H = stop-sales.
@@ -85,7 +85,7 @@ public sealed class SheetWriteBuffer
                     if (row is null)
                         continue; // no matching row: skip the get write-back silently
                     updates.Add(new SheetValueRange(
-                        $"{getSheetName}!{WriteStartColumn}{row}:{WriteEndColumn}{row}",
+                        $"{A1.QuoteTab(getSheetName)}!{WriteStartColumn}{row}:{WriteEndColumn}{row}",
                         [[
                             write.Vacancies?.ToString() ?? "",
                             write.Timestamp,
@@ -130,8 +130,8 @@ public sealed class SheetWriteBuffer
 
     /// <summary>
     /// Reads the get-sheet's A:E values and delegates the canonical
-    /// merged-cell layout parsing to <see cref="SheetCombinationParser"/>
-    /// (Task 10): a non-blank well-formed E starts a block, blank E carries
+    /// merged-cell layout parsing to <see cref="SheetCombinationParser"/>:
+    /// a non-blank well-formed E starts a block, blank E carries
     /// the current block's identity forward onto continuation rows, a
     /// malformed E clears the carry state. This method just flattens each
     /// parsed combination's timeslot rows back into per-row records so
@@ -141,7 +141,7 @@ public sealed class SheetWriteBuffer
     private static async Task<List<GetSheetRow>> ReadGetSheetRowsAsync(
         ISpreadsheetGateway gateway, string spreadsheetId, string getSheetName, CancellationToken ct)
     {
-        var rows = await gateway.GetValuesAsync(spreadsheetId, $"{getSheetName}!{InputColumns}", ct);
+        var rows = await gateway.GetValuesAsync(spreadsheetId, $"{A1.QuoteTab(getSheetName)}!{InputColumns}", ct);
         var parsed = new SheetCombinationParser().Parse(rows);
 
         var result = new List<GetSheetRow>();

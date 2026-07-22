@@ -270,7 +270,7 @@ Clean Architecture, dependencies point inward. 24 src projects, layered:
   A = time (blank for slotless), B = product external id, C = option
   external id, D = participant aliases, E = combination string
   (`productId|optionId|from|to`); write-back columns F = vacancies,
-  G = timestamp, H = stop-sales. `AvailabilityFetchService` reads A:E,
+  G = timestamp, H = stop-sales. `AvailabilityFetchService` reads A:G,
   fetches each combination from the vendor, upserts local rows, and writes
   the F:G status back; `SheetWriteBuffer` resolves a claimed row against a
   fresh A:E read and writes F:H. The sheet gateway is an optional
@@ -353,7 +353,7 @@ Clean Architecture, dependencies point inward. 24 src projects, layered:
 - Resilience: transport failures, timeouts, and a Polly open circuit or
   timeout rejection are all translated into `BookingSystemException` at the
   send boundary, so nothing vendor- or Polly-specific crosses the port.
-- `BrightTideOptions` (section `Adapters:BrightTide`: `BaseUrl`, `ApiKey`)
+- `BrightTideOptions` (section `BrightTide`: `BaseUrl`, `ApiKey`)
   is never tracked; it lives in tenant-local config or environment.
   `AddBrightTideBookingSystem(IConfiguration)` registers the validated
   options and the typed client as the scoped `IBookingSystemProvider`.

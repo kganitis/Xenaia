@@ -9,9 +9,8 @@ namespace Xenaia.Modules.Sync.Bookings;
 /// recovery once, then drains the wake-up channel: a fresh scope per drain
 /// cycle owns one <see cref="BookingPusher"/> and processes every request id
 /// currently queued. All logic lives in the pusher; this service is only the
-/// loop and scope plumbing. Registration is unconditional (like the other Sync
-/// hosted services); host-level flow gating (Sync:Flows:BookingsOutbound)
-/// arrives in Task 16.
+/// loop and scope plumbing. The host registers this hosted loop only when the
+/// Sync:Flows:BookingsOutbound flow flag is enabled.
 /// </summary>
 public sealed class BookingPushService(
     IServiceScopeFactory scopeFactory,

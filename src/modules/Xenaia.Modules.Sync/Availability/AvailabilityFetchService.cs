@@ -15,10 +15,10 @@ namespace Xenaia.Modules.Sync.Availability;
 /// <c>Sync:Availability:FetchDelayMs</c>, upserts timeslots as <c>Synced</c>
 /// rows, and writes vacancies (or a diagnostic string) plus a tenant-zoned
 /// timestamp back to F/G of every row considered. Never touches column H
-/// (stop-sales is Task 9's write-back concern). Stop-sales preservation
-/// (spec 6.2): a vendor-reported zero never overwrites the vacancies of a row
-/// whose StopSales is already true (the zero is the stop sale, not the
-/// capacity). Scoped: a fresh instance per Task 16 endpoint call.
+/// (stop-sales is the outbound pusher's write-back concern). Stop-sales
+/// preservation (spec 6.2): a vendor-reported zero never overwrites the
+/// vacancies of a row whose StopSales is already true (the zero is the stop
+/// sale, not the capacity). Scoped: a fresh instance per endpoint call.
 /// </summary>
 public sealed class AvailabilityFetchService
 {
@@ -63,7 +63,7 @@ public sealed class AvailabilityFetchService
     public async Task<SheetSyncSummary> SyncFromSheetAsync(string spreadsheetId, CancellationToken ct)
     {
         var getSheetName = _options.Availability.GetSheetName;
-        var rawRows = await _gateway.GetValuesAsync(spreadsheetId, $"{getSheetName}!A:G", ct);
+        var rawRows = await _gateway.GetValuesAsync(spreadsheetId, $"{A1.QuoteTab(getSheetName)}!A:G", ct);
         var parsed = _parser.Parse(rawRows);
 
         var successfulFetches = 0;
@@ -197,7 +197,7 @@ public sealed class AvailabilityFetchService
         new(date.ToDateTime(time ?? TimeOnly.MinValue), TimeSpan.Zero);
 
     private static SheetValueRange RowWrite(string getSheetName, int rowNumber, string vacanciesCell, string timestamp) =>
-        new($"{getSheetName}!F{rowNumber}:G{rowNumber}", [[vacanciesCell, timestamp]]);
+        new($"{A1.QuoteTab(getSheetName)}!F{rowNumber}:G{rowNumber}", [[vacanciesCell, timestamp]]);
 
     private string FormatTimestamp(DateTimeOffset utcNow)
     {
