@@ -2,7 +2,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xenaia.Core;
+using Xenaia.Domain.Bookings;
+using Xenaia.Domain.Bookings.Providers;
+using Xenaia.Domain.Bookings.Stores;
+using Xenaia.Modules.Triage.Helpdesk;
+using Xenaia.Modules.Triage.Processing;
 using Xenaia.Modules.Triage.Rules;
+using Xenaia.PortContracts.BookingSystem;
+using Xenaia.PortContracts.Fakes;
+using Xenaia.PortContracts.Helpdesk;
 using Xunit;
 
 namespace Xenaia.Modules.Triage.Tests;
@@ -122,5 +130,60 @@ public class TriageModuleRegistrationTests : IDisposable
         using var provider = services.BuildServiceProvider();
 
         AssertStartupFails(provider, "DateTimeFormats");
+    }
+
+    /// <summary>
+    /// Regression test for the TriageOptionsValidator scope fix: with a
+    /// booking system configured, BookingLookupProcessor (scoped, since its
+    /// dependencies are EF/adapter-scoped services) joins the registered
+    /// processors. Resolving IOptions&lt;TriageOptions&gt;.Value triggers
+    /// TriageOptionsValidator, which must resolve ITicketProcessor
+    /// instances to check names; doing that straight off the root provider
+    /// throws under ValidateScopes. This is the exact production shape
+    /// (host builds with Development's default ValidateScopes/ValidateOnBuild)
+    /// the fix targets, so it must not throw here either.
+    /// </summary>
+    [Fact]
+    public void Scoped_booking_lookup_processor_resolves_under_scope_validation()
+    {
+        WritePack(GoodPack);
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Tenant:BusinessName"] = "Meridian Trails",
+            ["Tenant:TimeZone"] = "America/New_York",
+            ["Tenant:Locales:0"] = "en-US",
+            ["Tenant:Triage:RulePackPath"] = _packPath,
+            ["Tenant:Triage:PollIntervalSeconds"] = "60",
+            ["Tenant:Bookings:BookingCodePattern"] = "^MT-[A-Z0-9]{8}$",
+            ["Tenant:Bookings:ProductCodePattern"] = "^MTP-[A-Z0-9]{4}$",
+        }).Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddXenaiaCore(configuration);
+        services.AddBookingsDomain(configuration);
+        // Stand-ins for the EF store and the BrightTide adapter, both scoped
+        // in production; the point of this test is the DI shape, not their
+        // behavior.
+        services.AddScoped<IBookingStore, FakeBookingStore>();
+        services.AddScoped<IBookingSystemProvider, InMemoryBookingSystemProvider>();
+        // TriageSweep (scoped) needs an IHelpdeskProvider to construct;
+        // ValidateOnBuild instantiates every registered service once, so
+        // this stand-in must be present even though the test never sweeps.
+        services.AddScoped<IHelpdeskProvider>(_ => new InMemoryHelpdeskProvider([]));
+        services.AddTriageModule(configuration, bookingSystemConfigured: true);
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true,
+            ValidateOnBuild = true,
+        });
+
+        var options = provider.GetRequiredService<IOptions<TriageOptions>>().Value;
+        Assert.Equal(_packPath, options.RulePackPath);
+
+        using var scope = provider.CreateScope();
+        var processors = scope.ServiceProvider.GetServices<ITicketProcessor>();
+        Assert.Contains(processors, p => p.Name == "booking-lookup");
     }
 }
