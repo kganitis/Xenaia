@@ -30,4 +30,12 @@ public sealed class BookingPayment : Entity<int>
         Status = status;
         PaidAt = paidAt;
     }
+
+    internal void Amend(decimal amount, string? paymentMethod, PaymentStatus status, DateTimeOffset? paidAt)
+    {
+        Amount = amount;
+        PaymentMethod = paymentMethod;
+        Status = status;
+        PaidAt = paidAt;
+    }
 }

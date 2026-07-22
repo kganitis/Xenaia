@@ -200,6 +200,71 @@ public sealed class Booking : AggregateRoot<int>, ISyncTracked
         item.CheckIn();
     }
 
+    public void ApplyStatus(BookingStatus status)
+    {
+        if (status == BookingStatus.Cancelled)
+            throw new BookingRuleViolationException(
+                $"Use Cancel to cancel booking {Code}; ApplyStatus cannot.");
+        Status = status;
+    }
+
+    public void Reprice(decimal finalPrice)
+    {
+        if (finalPrice < 0)
+            throw new BookingRuleViolationException("Final price cannot be negative.");
+        FinalPrice = finalPrice;
+    }
+
+    public void AmendItem(
+        int externalId, string participantTypeAlias,
+        DateTimeOffset activityAt, decimal finalPrice)
+    {
+        var item = _items.FirstOrDefault(i => i.ExternalId == externalId)
+            ?? throw new BookingRuleViolationException(
+                $"Booking {Code} has no item with external id {externalId}.");
+        item.Amend(participantTypeAlias, activityAt, finalPrice);
+    }
+
+    public void RemoveItem(int externalId) =>
+        _items.RemoveAll(i => i.ExternalId == externalId);
+
+    public void AmendExtra(
+        int externalId, string? title, DateTimeOffset? activityAt,
+        int quantity, decimal finalPrice)
+    {
+        var extra = _extras.FirstOrDefault(e => e.ExternalId == externalId)
+            ?? throw new BookingRuleViolationException(
+                $"Booking {Code} has no extra with external id {externalId}.");
+        extra.Amend(title, activityAt, quantity, finalPrice);
+    }
+
+    public void RemoveExtra(int externalId) =>
+        _extras.RemoveAll(e => e.ExternalId == externalId);
+
+    public void AmendPayment(
+        int externalId, decimal amount, string? paymentMethod,
+        PaymentStatus status, DateTimeOffset? paidAt)
+    {
+        var payment = _payments.FirstOrDefault(p => p.ExternalId == externalId)
+            ?? throw new BookingRuleViolationException(
+                $"Booking {Code} has no payment with external id {externalId}.");
+        payment.Amend(amount, paymentMethod, status, paidAt);
+    }
+
+    public void RemovePayment(int externalId) =>
+        _payments.RemoveAll(p => p.ExternalId == externalId);
+
+    public void AmendGiftCard(string code, decimal amount)
+    {
+        var giftCard = _giftCards.FirstOrDefault(g => g.Code == code)
+            ?? throw new BookingRuleViolationException(
+                $"Booking {Code} has no gift card '{code}'.");
+        giftCard.Amend(amount);
+    }
+
+    public void RemoveGiftCard(string code) =>
+        _giftCards.RemoveAll(g => g.Code == code);
+
     public void ClaimForSync() => Sync = Sync.Claim();
 
     public void MarkSynced(DateTimeOffset at) => Sync = Sync.MarkSynced(at);

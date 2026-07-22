@@ -16,4 +16,6 @@ public sealed class BookingGiftCard : Entity<int>
         Code = code;
         Amount = amount;
     }
+
+    internal void Amend(decimal amount) => Amount = amount;
 }

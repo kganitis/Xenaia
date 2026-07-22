@@ -41,4 +41,11 @@ public sealed class BookingItem : Entity<int>
     }
 
     internal void CheckIn() => CheckedIn = true;
+
+    internal void Amend(string participantTypeAlias, DateTimeOffset activityAt, decimal finalPrice)
+    {
+        ParticipantTypeAlias = participantTypeAlias;
+        ActivityAt = activityAt;
+        FinalPrice = finalPrice;
+    }
 }

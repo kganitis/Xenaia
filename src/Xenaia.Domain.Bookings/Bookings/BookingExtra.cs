@@ -38,4 +38,12 @@ public sealed class BookingExtra : Entity<int>
         Quantity = quantity;
         FinalPrice = finalPrice;
     }
+
+    internal void Amend(string? title, DateTimeOffset? activityAt, int quantity, decimal finalPrice)
+    {
+        Title = title;
+        ActivityAt = activityAt;
+        Quantity = quantity;
+        FinalPrice = finalPrice;
+    }
 }
