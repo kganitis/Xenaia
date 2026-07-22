@@ -3,9 +3,6 @@ using Microsoft.Extensions.Options;
 using Xenaia.Domain.Bookings.Sync;
 using Xenaia.Modules.Sync.Availability;
 using Xenaia.Modules.Sync.Tests.Fakes;
-// Alias needed: this file's own namespace ends in "Availability", which
-// shadows the bare aggregate type name Xenaia.Domain.Bookings.Availabilities.Availability.
-using AvailabilityAggregate = Xenaia.Domain.Bookings.Availabilities.Availability;
 
 namespace Xenaia.Modules.Sync.Tests.Availability;
 

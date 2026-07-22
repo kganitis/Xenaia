@@ -15,6 +15,10 @@ public interface IAvailabilityStore
     /// composite keys, tracked, for value-aware dedup.</summary>
     Task<IReadOnlyList<Availability>> GetByKeysAsync(
         IReadOnlyCollection<AvailabilityKey> keys, CancellationToken ct);
+    /// <summary>The tracked row for an id, or null if it no longer exists.
+    /// The processor loads a claimed row through this to build the vendor
+    /// update and to mark the final sync state.</summary>
+    Task<Availability?> GetByIdAsync(int id, CancellationToken ct);
     Task AddAsync(Availability availability, CancellationToken ct);
     /// <summary>Atomic Pending -> Processing claim; false if already claimed.</summary>
     Task<bool> TryClaimAsync(int id, CancellationToken ct);

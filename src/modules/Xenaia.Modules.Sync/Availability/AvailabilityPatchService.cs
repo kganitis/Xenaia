@@ -2,9 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
-// Alias needed: this file's own namespace ends in "Availability", which
-// shadows the bare aggregate type name Xenaia.Domain.Bookings.Availabilities.Availability.
-using AvailabilityAggregate = Xenaia.Domain.Bookings.Availabilities.Availability;
 
 namespace Xenaia.Modules.Sync.Availability;
 

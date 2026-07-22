@@ -34,6 +34,9 @@ public sealed class EfAvailabilityStore(XenaiaDbContext context) : IAvailability
             .ToList();
     }
 
+    public async Task<Availability?> GetByIdAsync(int id, CancellationToken ct)
+        => await context.Availabilities.FirstOrDefaultAsync(a => a.Id == id, ct);
+
     public Task AddAsync(Availability availability, CancellationToken ct)
     {
         context.Availabilities.Add(availability);

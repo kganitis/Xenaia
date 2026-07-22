@@ -5,4 +5,8 @@
     <ProjectReference Include="..\..\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Xenaia.Modules.Sync.Tests" />
+  </ItemGroup>
+
 </Project>

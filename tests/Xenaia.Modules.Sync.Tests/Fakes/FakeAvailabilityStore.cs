@@ -2,12 +2,6 @@ using System.Reflection;
 using Xenaia.Core.Domain;
 using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
-// Alias needed: a sibling test file declares namespace
-// Xenaia.Modules.Sync.Tests.Availability, which shadows the bare aggregate
-// type name Xenaia.Domain.Bookings.Availabilities.Availability project-wide
-// (namespace member lookup walks the enclosing Xenaia.Modules.Sync.Tests
-// namespace, where "Availability" now names that nested namespace).
-using AvailabilityAggregate = Xenaia.Domain.Bookings.Availabilities.Availability;
 
 namespace Xenaia.Modules.Sync.Tests.Fakes;
 
@@ -49,6 +43,9 @@ internal sealed class FakeAvailabilityStore : IAvailabilityStore
             .ToList();
         return Task.FromResult(result);
     }
+
+    public Task<AvailabilityAggregate?> GetByIdAsync(int id, CancellationToken ct)
+        => Task.FromResult(_byKey.Values.FirstOrDefault(a => a.Id == id));
 
     public Task AddAsync(AvailabilityAggregate availability, CancellationToken ct)
     {
