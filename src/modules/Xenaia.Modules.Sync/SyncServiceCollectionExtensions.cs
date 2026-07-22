@@ -52,18 +52,20 @@ public static class SyncServiceCollectionExtensions
             services.AddHostedService<AvailabilityProcessorService>();
 
         // Availability inbound (sheet-driven fetch, spec 6.2): the parser is
-        // stateless so one instance serves every call; the fetch service is
-        // scoped, resolved once per Task 16 endpoint call. ISpreadsheetGateway
-        // is a required dependency here (unlike the outbound pusher's optional
-        // one): the endpoint that will call this service already gates on a
-        // spreadsheet provider being registered before resolving it.
+        // stateless so one instance serves every call. The fetch service takes
+        // ISpreadsheetGateway as a required dependency (unlike the outbound
+        // pusher's optional one), so it is registered only when a spreadsheet
+        // provider is configured; otherwise ValidateOnBuild would fail to
+        // construct it. The endpoint that calls it also gates on the gateway
+        // being present before resolving the service.
         services.AddSingleton<SheetCombinationParser>();
-        services.AddScoped<AvailabilityFetchService>();
+        if (spreadsheetConfigured)
+            services.AddScoped<AvailabilityFetchService>();
 
         // Catalog sync (spec 6.5): the participant-type cache is a singleton
         // read-through over the scoped ICatalogStore (it opens its own scope
         // per miss); the sync service is scoped, resolved fresh per refresh
-        // tick or Task 16 endpoint call; the refresh service is the hosted
+        // tick or refresh endpoint call; the refresh service is the hosted
         // warm-start-then-daily trigger.
         services.AddSingleton<ParticipantTypeCache>();
         services.AddScoped<CatalogSyncService>();
