@@ -36,6 +36,29 @@ public class GoogleSpreadsheetGatewayTests
     }
 
     [Fact]
+    public async Task GetValuesAsync_maps_numeric_cells_with_invariant_culture_regardless_of_the_current_culture()
+    {
+        var api = new FakeSheetsApi
+        {
+            Values = new List<IList<object>> { Row(3.5) },
+        };
+        var sut = new GoogleSpreadsheetGateway(api);
+
+        var originalCulture = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("de-DE"); // comma-decimal locale
+        try
+        {
+            var values = await sut.GetValuesAsync(SpreadsheetId, "Availability!A1", CancellationToken.None);
+
+            Assert.Equal(["3.5"], values[0]);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
+    }
+
+    [Fact]
     public async Task GetValuesAsync_returns_an_empty_list_when_the_api_returns_no_values()
     {
         var api = new FakeSheetsApi { Values = null };

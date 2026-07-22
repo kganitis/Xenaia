@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using Google.Apis.Sheets.v4.Data;
 using Xenaia.Modules.Sync.Spreadsheets;
@@ -118,5 +119,8 @@ internal sealed class GoogleSpreadsheetGateway : ISpreadsheetGateway
             yield return source.Skip(offset).Take(size).ToList();
     }
 
-    private static string ToCellString(object? cell) => cell?.ToString() ?? "";
+    // Sheets deserializes numeric cells as boxed double/long; ToString() would
+    // format them under CultureInfo.CurrentCulture, silently corrupting reads
+    // under a comma-decimal locale (e.g. 3.5 becomes "3,5" under de-DE/el-GR).
+    private static string ToCellString(object? cell) => Convert.ToString(cell, CultureInfo.InvariantCulture) ?? "";
 }
