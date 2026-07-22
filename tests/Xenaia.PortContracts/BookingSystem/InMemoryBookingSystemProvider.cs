@@ -225,15 +225,15 @@ public sealed class InMemoryBookingSystemProvider : IBookingSystemProvider
 
         lock (_lock)
         {
+            if (update.Vacancies is not { } vacancies)
+                return Task.CompletedTask;
+
             var key = (update.ProductExternalId, update.OptionExternalId);
             if (!_availability.TryGetValue(key, out var slots))
             {
                 slots = [];
                 _availability[key] = slots;
             }
-
-            if (update.Vacancies is not { } vacancies)
-                return Task.CompletedTask;
 
             foreach (var at in TargetTimes(update))
             {

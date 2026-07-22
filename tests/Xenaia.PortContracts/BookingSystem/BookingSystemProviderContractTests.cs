@@ -191,6 +191,31 @@ public abstract class BookingSystemProviderContractTests
     }
 
     [Fact]
+    public async Task A_signal_only_update_on_an_unknown_product_or_option_leaves_it_unknown()
+    {
+        var provider = await CreateProviderAsync();
+        var at = new DateTimeOffset(2026, 8, 5, 9, 0, 0, TimeSpan.Zero);
+
+        await provider.UpdateAvailabilityAsync(new AvailabilityUpdate(
+            ProductExternalId: 999,
+            OptionExternalId: 999,
+            From: at,
+            To: at,
+            Times: null,
+            Vacancies: null,
+            StopSales: true,
+            ParticipantTypeAliases: ["adult"]), CancellationToken.None);
+
+        var availability = await provider.GetAvailabilityAsync(
+            999, 999,
+            new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 8, 31, 0, 0, 0, TimeSpan.Zero),
+            CancellationToken.None);
+
+        Assert.Null(availability);
+    }
+
+    [Fact]
     public async Task Products_and_options_round_trip_with_participant_types()
     {
         var provider = await CreateProviderAsync();
