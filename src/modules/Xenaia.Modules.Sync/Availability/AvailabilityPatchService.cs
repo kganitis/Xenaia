@@ -35,6 +35,16 @@ public sealed class AvailabilityPatchService(
                 $"Batch of {items.Count} items exceeds Sync:Availability:MaxBatchSize ({maxBatchSize}).",
                 nameof(items));
 
+        // Multi-day rows are rejected fail-closed before any store work:
+        // ExpandTimeslots keys every timeslot off From alone, so a From != To
+        // row would silently update one day while reporting the whole range
+        // synced. One row per day is required (spec 6.1).
+        foreach (var item in items)
+            if (item.From != item.To)
+                throw new ArgumentException(
+                    "multi-day patch items are not supported; submit one row per day",
+                    nameof(items));
+
         var expanded = new List<(AvailabilityKey Key, AvailabilityPatchItem Source)>();
         foreach (var item in items)
         {
@@ -54,9 +64,10 @@ public sealed class AvailabilityPatchService(
         // New rows have no real id until SaveChangesAsync assigns one (EF's
         // deferred key generation), so their work items are buffered here and
         // only written to the channel once the save that persisted them has
-        // run. Existing rows already carry a real id and can be written as
-        // they're accepted.
-        var pendingNewRowWorkItems = new List<(AvailabilityAggregate Row, SheetWriteContext? Sheet)>();
+        // run. Each buffered row keeps its key and source so a duplicate-insert
+        // race can be retried as a merge (see SaveBatchAsync). Existing rows
+        // already carry a real id and can be written as they're accepted.
+        var pendingNewRows = new List<PendingNewRow>();
 
         foreach (var (key, source) in expanded)
         {
@@ -86,39 +97,28 @@ public sealed class AvailabilityPatchService(
                 }
             }
 
-            if (source.Vacancies is not null)
-                row.SetVacancies(source.Vacancies.Value);
-            if (source.StopSales is not null)
-                row.SetStopSales(source.StopSales.Value);
-
-            // Requeue is only a legal transition from Synced/Failed/Processing;
-            // a Pending row (new or unclaimed) keeps its state as-is.
-            if (row.Sync.Status != SyncStatus.Pending)
-                row.RequeueSync();
-
+            ApplyMerge(row, source);
             accepted++;
 
             var sheet = spreadsheetId is not null
-                ? new SheetWriteContext(spreadsheetId, source.PatchStatusRange, GetRowRange: null)
+                ? new SheetWriteContext(spreadsheetId, source.PatchStatusRange)
                 : null;
 
             if (isNew)
-                pendingNewRowWorkItems.Add((row, sheet));
+                pendingNewRows.Add(new PendingNewRow(key, row, source, sheet));
             else
                 await channel.Writer.WriteAsync(new AvailabilityWorkItem(row.Id, sheet), ct);
 
             pendingSaves++;
             if (pendingSaves >= SaveBatchSize)
             {
-                await store.SaveChangesAsync(ct);
-                await FlushNewRowWorkItemsAsync(pendingNewRowWorkItems, channel, ct);
+                await SaveBatchAsync(pendingNewRows, ct);
                 pendingSaves = 0;
             }
         }
 
         if (pendingSaves > 0)
-            await store.SaveChangesAsync(ct);
-        await FlushNewRowWorkItemsAsync(pendingNewRowWorkItems, channel, ct);
+            await SaveBatchAsync(pendingNewRows, ct);
 
         logger.LogInformation(
             "Availability patch: {Accepted} accepted, {Skipped} skipped out of {Total} expanded rows",
@@ -127,16 +127,72 @@ public sealed class AvailabilityPatchService(
         return new AvailabilityPatchResult(accepted, skipped);
     }
 
-    /// <summary>Writes one work item per buffered new row, reading each row's
-    /// id now that a SaveChangesAsync has persisted it, then clears the buffer.</summary>
-    private static async Task FlushNewRowWorkItemsAsync(
-        List<(AvailabilityAggregate Row, SheetWriteContext? Sheet)> pendingNewRowWorkItems,
-        AvailabilityChannel channel, CancellationToken ct)
+    /// <summary>Merges an item's non-null signals onto a row and requeues it to
+    /// Pending. Requeue is only a legal transition from Synced/Failed/Processing;
+    /// a Pending row (new or unclaimed) just keeps its state as-is.</summary>
+    private static void ApplyMerge(AvailabilityAggregate row, AvailabilityPatchItem source)
     {
-        foreach (var (row, sheet) in pendingNewRowWorkItems)
-            await channel.Writer.WriteAsync(new AvailabilityWorkItem(row.Id, sheet), ct);
-        pendingNewRowWorkItems.Clear();
+        if (source.Vacancies is not null)
+            row.SetVacancies(source.Vacancies.Value);
+        if (source.StopSales is not null)
+            row.SetStopSales(source.StopSales.Value);
+        if (row.Sync.Status != SyncStatus.Pending)
+            row.RequeueSync();
     }
+
+    /// <summary>
+    /// Saves the current batch, then flushes one work item per buffered new
+    /// row (reading each row's id now that the save assigned it) and clears the
+    /// buffer. On a duplicate-insert race (another writer inserted a row with
+    /// the same key between our key lookup and our save), the store surfaces a
+    /// <see cref="DuplicateAvailabilityException"/>; we retry once by re-fetching
+    /// the batch's keys and converting each conflicted add into a value-aware
+    /// merge onto the row the racer already inserted. A second duplicate failure
+    /// propagates (spec section 12).
+    /// </summary>
+    private async Task SaveBatchAsync(List<PendingNewRow> pendingNewRows, CancellationToken ct)
+    {
+        try
+        {
+            await store.SaveChangesAsync(ct);
+        }
+        catch (DuplicateAvailabilityException)
+        {
+            await MergeConflictsAsync(pendingNewRows, ct);
+            await store.SaveChangesAsync(ct);
+        }
+
+        foreach (var pending in pendingNewRows)
+            await channel.Writer.WriteAsync(new AvailabilityWorkItem(pending.Row.Id, pending.Sheet), ct);
+        pendingNewRows.Clear();
+    }
+
+    /// <summary>Re-fetches the batch's keys (the racer's rows now exist and come
+    /// back tracked) and merges each conflicted add's signals onto the existing
+    /// row, retargeting its buffered work item at that row. Non-conflicting adds
+    /// (not yet in the store) are left to insert on the retry save.</summary>
+    private async Task MergeConflictsAsync(List<PendingNewRow> pendingNewRows, CancellationToken ct)
+    {
+        var keys = pendingNewRows.Select(p => p.Key).Distinct().ToList();
+        var existingByKey = (await store.GetByKeysAsync(keys, ct))
+            .ToDictionary(a => new AvailabilityKey(a.ExternalProductId, a.ExternalOptionId, a.TimeslotAt));
+
+        for (var i = 0; i < pendingNewRows.Count; i++)
+        {
+            var pending = pendingNewRows[i];
+            if (!existingByKey.TryGetValue(pending.Key, out var existing))
+                continue; // not the conflicting row: still a pending insert
+
+            ApplyMerge(existing, pending.Source);
+            pendingNewRows[i] = pending with { Row = existing };
+        }
+    }
+
+    /// <summary>A new row buffered until its batch save assigns its id, kept
+    /// with its key and source so a duplicate-insert race can be merged.</summary>
+    private sealed record PendingNewRow(
+        AvailabilityKey Key, AvailabilityAggregate Row,
+        AvailabilityPatchItem Source, SheetWriteContext? Sheet);
 
     /// <summary>Times empty means slotless: a single row at midnight of From
     /// (the 00:00 sentinel). Otherwise one row per time in Times at

@@ -100,6 +100,7 @@ function parsePatchRow_(raw, row, patchSheetName) {
   if (!/^\d+$/.test(optionId)) return { error: 'option_id must be a positive integer' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return { error: 'from must be yyyy-MM-dd' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(to)) return { error: 'to must be yyyy-MM-dd' };
+  if (from !== to) return { error: 'multi-day patch items are not supported; submit one row per day' };
   if (time !== '' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { error: 'time must be HH:mm or empty' };
   if (vacancies !== '' && !/^\d+$/.test(vacancies)) return { error: 'vacancies must be a non-negative integer or empty' };
   if (stopSales !== '' && stopSales !== 'true' && stopSales !== 'false') return { error: 'stop_sales must be true, false, or empty' };
@@ -113,7 +114,7 @@ function parsePatchRow_(raw, row, patchSheetName) {
       times: time === '' ? [] : [time],
       vacancies: vacancies === '' ? null : Number(vacancies),
       stopSales: stopSales === '' ? null : (stopSales === 'true'),
-      patchStatusRange: patchSheetName + '!B' + row + ':B' + row
+      patchStatusRange: quoteTab_(patchSheetName) + '!B' + row + ':B' + row
     }
   };
 }
@@ -141,6 +142,16 @@ function writeStatusForRange_(sheet, patchStatusRange, message) {
 }
 
 function timestamp_() { return new Date().toISOString(); }
+
+// Quotes a tab name for A1 notation: Google requires single quotes around a
+// tab name that holds anything beyond letters, digits, and underscores (a
+// space, punctuation, and so on). An inner single quote is doubled. The server
+// echoes patchStatusRange straight to the sheet gateway, so it must be valid
+// A1. Kept in sync with A1.QuoteTab on the backend.
+function quoteTab_(name) {
+  if (/^[A-Za-z0-9_]+$/.test(name)) return name;
+  return "'" + String(name).replace(/'/g, "''") + "'";
+}
 
 function installTriggers() {
   removeTriggers();

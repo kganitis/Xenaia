@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Xenaia.Data.PostgreSql;
 using Xenaia.Domain.Bookings.Availabilities;
 using Xenaia.Domain.Bookings.Bookings;
 using Xenaia.Domain.Bookings.Catalog;
 using Xenaia.Domain.Bookings.Codes;
 using Xenaia.Domain.Bookings.Products;
+using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
 
 namespace Xenaia.Data.Tests;
@@ -106,6 +108,27 @@ public class StoreTests(PostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Availability_store_maps_a_duplicate_insert_to_a_domain_exception()
+    {
+        var slot = new DateTimeOffset(2026, 9, 3, 8, 0, 0, TimeSpan.Zero);
+        await using (var seed = fixture.CreateContext())
+        {
+            seed.Availabilities.Add(Availability.ForTimeslot(9004, 1, slot));
+            await seed.SaveChangesAsync();
+        }
+
+        await using var context = fixture.CreateContext();
+        var store = new EfAvailabilityStore(context, new PostgresDbExceptionInterpreter());
+        await store.AddAsync(Availability.ForTimeslot(9004, 1, slot), default);
+
+        // The provider interpreter classifies the Npgsql 23505 and the store
+        // rethrows it as the domain exception the patch service retries on.
+        var ex = await Assert.ThrowsAsync<DuplicateAvailabilityException>(
+            () => store.SaveChangesAsync(default));
+        Assert.Contains(new AvailabilityKey(9004, 1, slot), ex.ConflictingKeys);
+    }
+
+    [Fact]
     public async Task Availability_try_claim_succeeds_once_then_fails()
     {
         var slot = new DateTimeOffset(2026, 9, 2, 8, 0, 0, TimeSpan.Zero);
@@ -119,7 +142,7 @@ public class StoreTests(PostgresFixture fixture)
         }
 
         await using var context = fixture.CreateContext();
-        var store = new EfAvailabilityStore(context);
+        var store = new EfAvailabilityStore(context, new PostgresDbExceptionInterpreter());
 
         Assert.True(await store.TryClaimAsync(id, default));
         Assert.False(await store.TryClaimAsync(id, default));
@@ -144,7 +167,7 @@ public class StoreTests(PostgresFixture fixture)
         }
 
         await using var context = fixture.CreateContext();
-        var store = new EfAvailabilityStore(context);
+        var store = new EfAvailabilityStore(context, new PostgresDbExceptionInterpreter());
 
         var reset = await store.ResetProcessingAsync(default);
         Assert.True(reset >= 1);

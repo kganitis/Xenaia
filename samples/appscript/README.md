@@ -58,7 +58,9 @@ the get tab from the booking system, and shows the result as a toast:
 Column A fields:
 
 - `product_id`, `option_id`: the catalog's external ids (positive integers).
-- `from`, `to`: dates in `yyyy-MM-dd` format.
+- `from`, `to`: dates in `yyyy-MM-dd` format. `from` and `to` must be the same
+  day: multi-day rows are not supported, so submit one row per day. A row whose
+  `from` and `to` differ is rejected (by the script and by the backend).
 - `time`: `HH:mm` for a specific timeslot, or empty for a slotless product.
 - `vacancies`: an integer to set, or empty to leave the current value unchanged.
 - `stop_sales`: `true` or `false` to set, or empty to leave the current value unchanged.

@@ -6,7 +6,8 @@ using Xenaia.Domain.Bookings.Sync;
 namespace Xenaia.Data;
 
 /// <summary>EF-backed repository for the Availability aggregate.</summary>
-public sealed class EfAvailabilityStore(XenaiaDbContext context) : IAvailabilityStore
+public sealed class EfAvailabilityStore(
+    XenaiaDbContext context, IDbExceptionInterpreter dbExceptions) : IAvailabilityStore
 {
     public async Task<IReadOnlyList<Availability>> GetByKeysAsync(
         IReadOnlyCollection<AvailabilityKey> keys, CancellationToken ct)
@@ -69,5 +70,31 @@ public sealed class EfAvailabilityStore(XenaiaDbContext context) : IAvailability
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.Sync.Status, SyncStatus.Pending), ct);
 
-    public Task SaveChangesAsync(CancellationToken ct) => context.SaveChangesAsync(ct);
+    // A unique-index insert race surfaces as a provider-specific save failure
+    // (Postgres 23505); the injected interpreter classifies it without this
+    // provider-agnostic project referencing Npgsql. The conflicting Added
+    // entries are detached so the caller can re-fetch the now-existing rows and
+    // retry the save as a merge (the non-conflicting adds stay Added and insert
+    // on the retry), then the failure is rethrown as a domain exception.
+    public async Task SaveChangesAsync(CancellationToken ct)
+    {
+        try
+        {
+            await context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (dbExceptions.IsUniqueViolation(ex))
+        {
+            var conflicting = ex.Entries
+                .Where(e => e.Entity is Availability)
+                .ToList();
+            foreach (var entry in conflicting)
+                entry.State = EntityState.Detached;
+
+            var keys = conflicting
+                .Select(e => (Availability)e.Entity)
+                .Select(a => new AvailabilityKey(a.ExternalProductId, a.ExternalOptionId, a.TimeslotAt))
+                .ToList();
+            throw new DuplicateAvailabilityException(keys, ex);
+        }
+    }
 }

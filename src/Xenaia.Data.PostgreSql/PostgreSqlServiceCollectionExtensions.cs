@@ -20,6 +20,9 @@ public static class PostgreSqlServiceCollectionExtensions
         // Hosted services start in registration order: the migrator must register
         // before AddXenaiaData's drainer so the schema exists before the first drain.
         services.AddHostedService<MigrationHostedService>();
+        // Registered before AddXenaiaData so its TryAdd default stays out: the
+        // EF stores read this to map Npgsql 23505 to a domain exception.
+        services.AddSingleton<IDbExceptionInterpreter, PostgresDbExceptionInterpreter>();
         services.AddXenaiaData(configuration);
         services.AddDbContext<XenaiaDbContext>((provider, options) => options
             .UseNpgsql(

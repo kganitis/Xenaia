@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xenaia.Domain.Bookings.Stores;
 using Xenaia.Domain.Bookings.Sync;
 using Xenaia.Modules.Sync.Availability;
 using Xenaia.Modules.Sync.Tests.Fakes;
@@ -191,6 +192,52 @@ public class AvailabilityPatchServiceTests
     }
 
     [Fact]
+    public async Task Multi_day_item_is_rejected_before_any_store_work()
+    {
+        var store = new FakeAvailabilityStore();
+        var service = CreateService(store, out var channel);
+        var item = new AvailabilityPatchItem(
+            ProductId, OptionId, Day, Day.AddDays(1), [new TimeOnly(9, 0)], 5, null, null);
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(
+            () => service.EnqueueAsync([item], null, false, CancellationToken.None));
+
+        Assert.Contains("multi-day patch items are not supported", ex.Message);
+        // Fail closed before touching the store: no lookup, no save, no row.
+        Assert.Equal(0, store.GetByKeysCallCount);
+        Assert.Equal(0, store.SaveChangesCallCount);
+        Assert.Empty(store.All);
+        Assert.Empty(Drain(channel));
+    }
+
+    [Fact]
+    public async Task Duplicate_insert_race_is_retried_as_a_merge_onto_the_existing_row()
+    {
+        // A concurrent writer inserted a Synced row for this key first.
+        var racer = AvailabilityAggregate.ForTimeslot(ProductId, OptionId, TimeslotAt(new TimeOnly(9, 0)));
+        racer.SetVacancies(3);
+        racer.ClaimForSync();
+        racer.MarkSynced(DateTimeOffset.UtcNow);
+        var store = new DuplicateRaceAvailabilityStore(racer);
+        var service = CreateService(store, out var channel);
+        var item = new AvailabilityPatchItem(ProductId, OptionId, Day, Day, [new TimeOnly(9, 0)], 9, null, null);
+
+        var result = await service.EnqueueAsync([item], null, false, CancellationToken.None);
+
+        Assert.Equal(1, result.Accepted);
+        Assert.Equal(0, result.Skipped);
+        // The insert failed once, then the retry saved the merge.
+        Assert.Equal(2, store.SaveChangesCallCount);
+        // The merge landed on the racer's row: value applied, requeued to Pending.
+        Assert.Equal(9, racer.Vacancies);
+        Assert.Equal(SyncStatus.Pending, racer.Sync.Status);
+        // The work item carries the now-existing row's real id, not the dropped add.
+        var workItem = Assert.Single(Drain(channel));
+        Assert.NotEqual(0, workItem.AvailabilityId);
+        Assert.Equal(racer.Id, workItem.AvailabilityId);
+    }
+
+    [Fact]
     public async Task More_than_max_batch_size_throws()
     {
         var store = new FakeAvailabilityStore();
@@ -221,7 +268,6 @@ public class AvailabilityPatchServiceTests
         Assert.NotNull(workItem.Sheet);
         Assert.Equal("sheet-123", workItem.Sheet!.SpreadsheetId);
         Assert.Equal("PatchSheet!A5", workItem.Sheet.PatchStatusRange);
-        Assert.Null(workItem.Sheet.GetRowRange);
     }
 
     [Fact]
@@ -270,7 +316,7 @@ public class AvailabilityPatchServiceTests
     }
 
     private static AvailabilityPatchService CreateService(
-        FakeAvailabilityStore store, out AvailabilityChannel channel, SyncOptions? options = null)
+        IAvailabilityStore store, out AvailabilityChannel channel, SyncOptions? options = null)
     {
         channel = new AvailabilityChannel(1000);
         return new AvailabilityPatchService(

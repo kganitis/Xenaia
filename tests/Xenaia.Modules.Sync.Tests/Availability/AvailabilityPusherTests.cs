@@ -35,7 +35,7 @@ public class AvailabilityPusherTests
         var buffer = new SheetWriteBuffer();
         var pusher = CreatePusher(store, provider, catalog, buffer, new InMemorySpreadsheetGateway());
 
-        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5", null));
+        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5"));
         var outcome = await pusher.ProcessAsync(item, CancellationToken.None);
 
         Assert.Equal(PushOutcome.Synced, outcome);
@@ -92,7 +92,7 @@ public class AvailabilityPusherTests
             store, provider, new FakeCatalogStore(), buffer, new InMemorySpreadsheetGateway(),
             delayer: (d, _) => { delays.Add(d); return Task.CompletedTask; });
 
-        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5", null));
+        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5"));
         var outcome = await pusher.ProcessAsync(item, CancellationToken.None);
 
         Assert.Equal(PushOutcome.Failed, outcome);
@@ -118,7 +118,7 @@ public class AvailabilityPusherTests
         var buffer = new SheetWriteBuffer();
         var pusher = CreatePusher(store, provider, new FakeCatalogStore(), buffer, new InMemorySpreadsheetGateway());
 
-        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5", null));
+        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5"));
         var outcome = await pusher.ProcessAsync(item, CancellationToken.None);
 
         Assert.Equal(PushOutcome.LostClaim, outcome);
@@ -169,7 +169,7 @@ public class AvailabilityPusherTests
         var pusher = CreatePusher(store, provider, new FakeCatalogStore(), buffer, gateway: null);
 
         // Sheet context is present, but with no gateway it must be ignored.
-        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5", null));
+        var item = new AvailabilityWorkItem(row.Id, new SheetWriteContext("ss-1", "PatchSheet!B5"));
         var outcome = await pusher.ProcessAsync(item, CancellationToken.None);
 
         Assert.Equal(PushOutcome.Synced, outcome);

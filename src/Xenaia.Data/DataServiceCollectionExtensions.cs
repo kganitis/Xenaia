@@ -27,6 +27,10 @@ public static class DataServiceCollectionExtensions
         services.AddScoped<ISyncCheckpointStore, EfSyncCheckpointStore>();
         services.AddHostedService<OutboxDrainerService>();
         services.TryAddSingleton(TimeProvider.System);
+        // Providers register their own interpreter (e.g. the PostgreSQL one)
+        // before calling this, so TryAdd leaves it in place; otherwise the
+        // no-op default classifies nothing and save failures propagate raw.
+        services.TryAddSingleton<IDbExceptionInterpreter, NullDbExceptionInterpreter>();
         services.AddSingleton<DomainEventsToOutboxInterceptor>();
         services.AddSingleton<AuditStampInterceptor>();
         return services;
