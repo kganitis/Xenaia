@@ -77,6 +77,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xenaia.Adapters.BrightTide.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "adapters", "adapters", "{3E9C3776-17C9-28DE-3735-A8B9F121C183}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xenaia.Adapters.GoogleWorkspace.Tests", "tests\Xenaia.Adapters.GoogleWorkspace.Tests\Xenaia.Adapters.GoogleWorkspace.Tests.csproj", "{6742CEA1-00A0-408D-A448-301612016604}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -483,6 +485,18 @@ Global
 		{5DE1DCF9-898E-4B2F-86DA-FA85099B0433}.Release|x64.Build.0 = Release|Any CPU
 		{5DE1DCF9-898E-4B2F-86DA-FA85099B0433}.Release|x86.ActiveCfg = Release|Any CPU
 		{5DE1DCF9-898E-4B2F-86DA-FA85099B0433}.Release|x86.Build.0 = Release|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Debug|x64.Build.0 = Debug|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Debug|x86.Build.0 = Debug|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Release|x64.ActiveCfg = Release|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Release|x64.Build.0 = Release|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Release|x86.ActiveCfg = Release|Any CPU
+		{6742CEA1-00A0-408D-A448-301612016604}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -523,5 +537,6 @@ Global
 		{EC447DCF-ABFA-6E24-52A5-D7FD48A5C558} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{5DE1DCF9-898E-4B2F-86DA-FA85099B0433} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{3E9C3776-17C9-28DE-3735-A8B9F121C183} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{6742CEA1-00A0-408D-A448-301612016604} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

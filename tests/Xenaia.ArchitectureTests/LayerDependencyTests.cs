@@ -28,6 +28,9 @@ public class LayerDependencyTests
         // BrightTide implements IBookingSystemProvider (owned by Domain.Bookings);
         // it may reference Domain.Bookings + Core only, no modules or other layers.
         { "Xenaia.Adapters.BrightTide", new[] { "Xenaia.Core.Ai", "Xenaia.Modules", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer", "Xenaia.Extensions" } },
+        // GoogleWorkspace implements ISpreadsheetGateway (owned by Modules.Sync);
+        // it may reference Modules.Sync + transitive only, no other modules or layers.
+        { "Xenaia.Adapters.GoogleWorkspace", new[] { "Xenaia.Core.Ai", "Xenaia.Domain", "Xenaia.Modules.Triage", "Xenaia.Modules.Concierge", "Xenaia.Modules.AgentQa", "Xenaia.Modules.Rostering", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer", "Xenaia.Extensions" } },
     };
 
     [Theory]

@@ -1,9 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Xenaia.Core\Xenaia.Core.csproj" />
+    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.70.0.3819" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\modules\Xenaia.Modules.Sync\Xenaia.Modules.Sync.csproj" />
-    <ProjectReference Include="..\..\modules\Xenaia.Modules.Rostering\Xenaia.Modules.Rostering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Xenaia.Adapters.GoogleWorkspace.Tests" />
   </ItemGroup>
 
 </Project>
