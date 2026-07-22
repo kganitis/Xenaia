@@ -16,7 +16,7 @@ public class BrightTideMappingTests
     private const string BookingJson = """
         {
           "code": "MT-7Q2K9F4A",
-          "secret_code": "SEC-7Q2K9F4A",
+          "secret_code": "MT-SECRET-SAMPLE",
           "booking_type": "api",
           "booking_status": "pending",
           "final_price": 84.50,
@@ -24,7 +24,7 @@ public class BrightTideMappingTests
           "channel_booking_code": "WH-123",
           "lead_contact_name": "Guest",
           "email": "guest@example.net",
-          "phone": "+30 210 0000000",
+          "phone": "+353 1 555 0100",
           "activity_language": "en",
           "created_date_time": "2026-07-01T09:00:00",
           "update_date_time": "2026-07-02T11:30:00",
@@ -48,7 +48,7 @@ public class BrightTideMappingTests
         var snapshot = BrightTideMapping.ToSnapshot(dto);
 
         Assert.Equal("MT-7Q2K9F4A", snapshot.Code);
-        Assert.Equal("SEC-7Q2K9F4A", snapshot.SecretCode);
+        Assert.Equal("MT-SECRET-SAMPLE", snapshot.SecretCode);
         Assert.Equal(BookingType.Api, snapshot.Type);
         Assert.Equal(BookingStatus.Pending, snapshot.Status);
         Assert.Equal(84.50m, snapshot.FinalPrice);

@@ -1,0 +1,2 @@
+# Reviewed findings: fictional Meridian Trails test fixture values, not real credentials.
+d34d8c418015adf39998ecd7c07ff46472c683b4:tests/Xenaia.Adapters.BrightTide.Tests/BrightTideMappingTests.cs:generic-api-key:19
