@@ -199,6 +199,14 @@ public sealed class BrightTideClient(HttpClient http) : IBookingSystemProvider
         {
             throw new BookingSystemException("BrightTide request timed out.", ex);
         }
+        catch (Polly.ExecutionRejectedException ex)
+        {
+            // The standard resilience handler surfaces an open circuit
+            // (BrokenCircuitException) or an attempt/total timeout
+            // (TimeoutRejectedException) as raw Polly types; the port contract
+            // requires transport failures to arrive as BookingSystemException.
+            throw new BookingSystemException("BrightTide resilience pipeline rejected the request.", ex);
+        }
     }
 
     private static async Task ThrowIfUnhandled(HttpResponseMessage response, CancellationToken ct)

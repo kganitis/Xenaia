@@ -221,4 +221,18 @@ public class BrightTideClientTests
         await Assert.ThrowsAsync<BookingSystemException>(() =>
             client.GetProductsAsync(CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Resilience_pipeline_rejection_wraps_to_booking_system_exception()
+    {
+        // The standard resilience handler can surface a raw Polly rejection
+        // (open circuit or attempt/total timeout) under sustained failure; the
+        // adapter must translate it into the port's BookingSystemException.
+        var client = ClientOver(new ThrowingHandler(new Polly.Timeout.TimeoutRejectedException("pipeline timeout")));
+
+        var ex = await Assert.ThrowsAsync<BookingSystemException>(() =>
+            client.GetProductsAsync(CancellationToken.None));
+
+        Assert.IsType<Polly.Timeout.TimeoutRejectedException>(ex.InnerException);
+    }
 }
