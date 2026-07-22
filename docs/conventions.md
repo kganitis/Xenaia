@@ -19,4 +19,5 @@ Code and testing conventions for this repository.
 - **Port contract tests:** one reusable suite per port; every adapter must pass its port's suite. A new adapter starts by making the contract suite pass.
 - **Rule-engine golden tests:** the sample rule pack + a corpus of fictional ticket fixtures → expected categorizations. Doubles as living documentation of the rule format.
 - **Integration tests** are compose-based (Postgres + mocked external APIs) and cover the three milestone flows.
+- **Injected clock and delayer.** Time-dependent code takes a `TimeProvider` and, where it waits between retries or throttled calls, an injectable delayer (`Func<TimeSpan, CancellationToken, Task>`). Tests pass a fake clock and a no-op or recording delayer, so backoff and throttle logic is asserted without real waiting; the production default delays against the injected clock, which a fake clock would otherwise stall.
 - All fixtures, sample data, and test names reference the fictional demo tenant only.
