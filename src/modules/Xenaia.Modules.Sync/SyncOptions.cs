@@ -14,8 +14,9 @@ public sealed record SyncOptions : ISectionOptions
 
     /// <summary>Set by the host when a spreadsheet provider is configured
     /// (see Task 16); only then does the validator require Availability's
-    /// PatchSheetName/GetSheetName to be non-blank.</summary>
-    public bool RequireSheetNames { get; init; }
+    /// PatchSheetName/GetSheetName to be non-blank. Mutable so the host can
+    /// flip it through PostConfigure after binding.</summary>
+    public bool RequireSheetNames { get; set; }
 }
 
 public sealed record FlowsOptions

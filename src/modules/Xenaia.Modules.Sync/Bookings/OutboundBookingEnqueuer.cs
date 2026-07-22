@@ -43,15 +43,15 @@ public sealed class OutboundBookingEnqueuer(
 
     /// <summary>Verifies the local booking exists and is not already cancelled,
     /// persists a Cancel request as Pending, wakes the channel, and returns the
-    /// request id. Throws <see cref="InvalidOperationException"/> when the code
-    /// is unknown or the booking is already cancelled (the endpoint maps those
-    /// to 404/409).</summary>
+    /// request id. Throws <see cref="UnknownBookingException"/> when the code is
+    /// unknown and <see cref="BookingAlreadyCancelledException"/> when the
+    /// booking is already cancelled; the endpoint maps those to 404/409.</summary>
     public async Task<int> EnqueueCancelAsync(string bookingCode, CancellationToken ct)
     {
         var booking = await bookingStore.GetByCodeAsync(bookingCode, ct)
-            ?? throw new InvalidOperationException($"No local booking with code '{bookingCode}'.");
+            ?? throw new UnknownBookingException(bookingCode);
         if (booking.Status == BookingStatus.Cancelled)
-            throw new InvalidOperationException($"Booking '{bookingCode}' is already cancelled.");
+            throw new BookingAlreadyCancelledException(bookingCode);
 
         var request = OutboundBookingRequest.ForCancel(bookingCode);
         await store.AddAsync(request, ct);

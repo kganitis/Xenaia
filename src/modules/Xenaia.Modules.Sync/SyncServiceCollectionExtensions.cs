@@ -12,17 +12,30 @@ namespace Xenaia.Modules.Sync;
 public static class SyncServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the Sync module: options + validator, plus the availability
-    /// patch flow's channel (singleton wake-up queue) and service (scoped,
-    /// owns a store per call). Later tasks append the remaining flow and
-    /// hosted services to this one method as BrightTide and Google Workspace
-    /// adapters come online.
+    /// Registers the Sync module: options + validator, the five flows' channels
+    /// and application services (all scoped/singleton, resolved by the Api
+    /// endpoints), and a hosted background service per flow. Each flow's hosted
+    /// service is gated by its <c>Sync:Flows:*</c> boolean (default true); the
+    /// gating decision is read from configuration here, at registration time.
+    /// <paramref name="spreadsheetConfigured"/> is passed by the host when a
+    /// spreadsheet provider is registered: only then does the validator require
+    /// the sheet names (spec section 7).
     /// </summary>
     public static IServiceCollection AddSyncModule(
-        this IServiceCollection services, IConfiguration configuration)
+        this IServiceCollection services, IConfiguration configuration,
+        bool spreadsheetConfigured = false)
     {
         services.AddValidatedOptions<SyncOptions>(configuration);
         services.AddSingleton<IValidateOptions<SyncOptions>, SyncOptionsValidator>();
+        if (spreadsheetConfigured)
+            services.PostConfigure<SyncOptions>(o => o.RequireSheetNames = true);
+
+        // Flow gating (spec section 6): the DB rows are the durable queue, so the
+        // application services always register (the endpoints need them); only
+        // the hosted drain/poll loops are gated. Bound manually here because the
+        // validated options are not built yet at registration time.
+        var flows = configuration.GetSection(SyncOptions.SectionName).Get<SyncOptions>()?.Flows
+            ?? new FlowsOptions();
 
         services.AddSingleton(sp =>
             new AvailabilityChannel(sp.GetRequiredService<IOptions<SyncOptions>>().Value.Availability.ChannelCapacity));
@@ -35,7 +48,8 @@ public static class SyncServiceCollectionExtensions
         // it stays null and no sheet write-back is attempted.
         services.AddScoped<SheetWriteBuffer>();
         services.AddScoped<AvailabilityPusher>();
-        services.AddHostedService<AvailabilityProcessorService>();
+        if (flows.AvailabilityOutbound)
+            services.AddHostedService<AvailabilityProcessorService>();
 
         // Availability inbound (sheet-driven fetch, spec 6.2): the parser is
         // stateless so one instance serves every call; the fetch service is
@@ -53,27 +67,27 @@ public static class SyncServiceCollectionExtensions
         // warm-start-then-daily trigger.
         services.AddSingleton<ParticipantTypeCache>();
         services.AddScoped<CatalogSyncService>();
-        services.AddHostedService<CatalogRefreshService>();
+        if (flows.Catalog)
+            services.AddHostedService<CatalogRefreshService>();
 
         // Bookings inbound (spec 6.3): the sweep is scoped, resolved fresh per
         // BookingPollingService tick; the polling service is the hosted
-        // checkpoint-driven loop. Registration is unconditional here (like
-        // the hosted services above); host-level flow gating arrives in
-        // Task 16.
+        // checkpoint-driven loop, gated by the BookingsInbound flow flag.
         services.AddScoped<BookingInboundSweep>();
-        services.AddHostedService<BookingPollingService>();
+        if (flows.BookingsInbound)
+            services.AddHostedService<BookingPollingService>();
 
         // Bookings outbound (spec 6.4): the channel is a singleton wake-up
-        // queue sized by Bookings.ChannelCapacity; the enqueuer (Task 16
+        // queue sized by Bookings.ChannelCapacity; the enqueuer (the Api
         // endpoints call it) and the pusher are scoped, each resolved fresh
         // per call or drain cycle; the push service is the hosted
-        // recovery-then-drain loop. Unconditional registration, like the
-        // hosted services above; host-level flow gating arrives in Task 16.
+        // recovery-then-drain loop, gated by the BookingsOutbound flow flag.
         services.AddSingleton(sp =>
             new BookingChannel(sp.GetRequiredService<IOptions<SyncOptions>>().Value.Bookings.ChannelCapacity));
         services.AddScoped<OutboundBookingEnqueuer>();
         services.AddScoped<BookingPusher>();
-        services.AddHostedService<BookingPushService>();
+        if (flows.BookingsOutbound)
+            services.AddHostedService<BookingPushService>();
 
         return services;
     }

@@ -5,7 +5,10 @@
     <ProjectReference Include="..\..\Xenaia.Data.PostgreSql\Xenaia.Data.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Xenaia.Domain.Bookings\Xenaia.Domain.Bookings.csproj" />
     <ProjectReference Include="..\..\modules\Xenaia.Modules.Triage\Xenaia.Modules.Triage.csproj" />
+    <ProjectReference Include="..\..\modules\Xenaia.Modules.Sync\Xenaia.Modules.Sync.csproj" />
     <ProjectReference Include="..\..\adapters\Xenaia.Adapters.Freshdesk\Xenaia.Adapters.Freshdesk.csproj" />
+    <ProjectReference Include="..\..\adapters\Xenaia.Adapters.BrightTide\Xenaia.Adapters.BrightTide.csproj" />
+    <ProjectReference Include="..\..\adapters\Xenaia.Adapters.GoogleWorkspace\Xenaia.Adapters.GoogleWorkspace.csproj" />
   </ItemGroup>
 
   <ItemGroup>

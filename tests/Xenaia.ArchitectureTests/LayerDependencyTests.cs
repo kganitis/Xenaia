@@ -18,7 +18,9 @@ public class LayerDependencyTests
         { "Xenaia.Domain.Bookings", new[] { "Xenaia.Core.Ai", "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer", "Xenaia.Extensions" } },
         { "Xenaia.Modules.Triage", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Modules.Concierge", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
-        { "Xenaia.Modules.Sync", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
+        // Sync may reference Core + Domain.Bookings only (spec section 2): no
+        // adapters, no Data, no hosts, and no other module.
+        { "Xenaia.Modules.Sync", new[] { "Xenaia.Modules.Triage", "Xenaia.Modules.Concierge", "Xenaia.Modules.AgentQa", "Xenaia.Modules.Rostering", "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Modules.AgentQa", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Modules.Rostering", new[] { "Xenaia.Adapters", "Xenaia.Data", "Xenaia.Api", "Xenaia.McpServer" } },
         { "Xenaia.Data", new[] { "Xenaia.Modules", "Xenaia.Adapters", "Xenaia.Api", "Xenaia.McpServer" } },

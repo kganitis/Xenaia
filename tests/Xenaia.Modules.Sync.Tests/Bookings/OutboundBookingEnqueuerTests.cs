@@ -112,7 +112,7 @@ public class OutboundBookingEnqueuerTests
         var store = new FakeOutboundBookingRequestStore();
         var sut = CreateSut(store, new FakeBookingStore(), new FakeCatalogStore(), new BookingChannel(10));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<UnknownBookingException>(
             () => sut.EnqueueCancelAsync("MT-0000", CancellationToken.None));
 
         Assert.Empty(store.All);
@@ -129,7 +129,7 @@ public class OutboundBookingEnqueuerTests
         bookingStore.Seed(booking);
         var sut = CreateSut(store, bookingStore, new FakeCatalogStore(), new BookingChannel(10));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<BookingAlreadyCancelledException>(
             () => sut.EnqueueCancelAsync("MT-6000", CancellationToken.None));
 
         Assert.Empty(store.All);
